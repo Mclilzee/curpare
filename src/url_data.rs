@@ -1,15 +1,7 @@
-use std::str::FromStr;
-
-pub struct UrlData {
+pub struct MetaData {
     name: String,
-    status_code: u32,
-    body_content: String,
-}
-
-impl FromStr for UrlData {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        todo!()
-    }
+    url: String,
+    ignore: Option<Vec<String>>,
+    format: Option<bool>,
+    cached: Option<bool>,
 }
