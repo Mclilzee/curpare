@@ -1,8 +1,9 @@
 use std::str::FromStr;
 
 pub struct UrlData {
-    url: String,
-    data: String,
+    name: String,
+    status_code: u32,
+    body_content: String,
 }
 
 impl FromStr for UrlData {
