@@ -55,8 +55,6 @@ fn main() {
         .and_then(|output| String::from_utf8(output).ok())
         .unwrap();
 
-    println!("{output}");
-    println!("{output2}");
     different_aproach();
 }
 
