@@ -1,3 +1,6 @@
+use serde::Deserialize;
+
+#[derive(Deserialize)]
 pub struct MetaData {
     name: String,
     url: String,
