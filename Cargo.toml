@@ -7,3 +7,5 @@ edition = "2024"
 anyhow = "1.0.98"
 clap = { version = "4.5.37", features = ["derive"] }
 prettydiff = "0.8.0"
+reqwest = "0.12.15"
+tokio = { version = "1.45.0", features = ["macros", "rt-multi-thread"] }
