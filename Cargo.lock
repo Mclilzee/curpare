@@ -231,6 +231,7 @@ dependencies = [
  "prettydiff",
  "reqwest",
  "serde",
+ "serde-html",
  "serde_json",
  "tokio",
 ]
@@ -1134,6 +1135,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5f0e2c6ed6606019b4e29e69dbaba95b11854410e5347d525002456dbbb786b6"
 dependencies = [
  "serde_derive",
+]
+
+[[package]]
+name = "serde-html"
+version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2003f7c39958b2e4cb36116057dc863234ddfe8f9ebad9a19454b85c9aef4f04"
+dependencies = [
+ "indexmap",
+ "serde",
 ]
 
 [[package]]

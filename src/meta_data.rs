@@ -2,15 +2,15 @@ use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub struct MetaData {
-    left: Data,
-    right: Data,
+    pub left: Data,
+    pub right: Data,
 }
 
 #[derive(Deserialize)]
 pub struct Data {
-    name: String,
-    url: String,
-    ignore: Option<Vec<String>>,
-    format: Option<bool>,
-    cached: Option<bool>,
+    pub name: String,
+    pub url: String,
+    pub ignore: Option<Vec<String>>,
+    pub format: Option<bool>,
+    pub cached: Option<bool>,
 }
