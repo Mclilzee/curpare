@@ -1,3 +1,4 @@
+#![allow(clippy::doc_markdown)]
 use clap::Parser;
 use std::path::PathBuf;
 
@@ -11,12 +12,13 @@ use std::path::PathBuf;
 pub struct Args {
     /// Path of the json file format to load for urls configurations. The configuration should be a list of objects each having left, and right.
     /// each object will be formatted in this format
-    ///{
-    ///name:"name of the comparison",
-    ///url: "<https://example.com>",
-    ///ignore: "regex to ignore lines that matches"
-    ///json: boolean, if set to true it will format the json
-    /// cached: boolean, will cache the call to be used again
+    ///
+    ///{{n}
+    ///  name:"name of the comparison",{n}
+    ///  url: "https://example.com",{n}
+    ///  ignore: "regex to ignore lines that matches",{n}
+    ///  json: boolean # if set to true it will format the json,{n}
+    ///  cached: boolean # will cache the call to be used again{n}
     ///}
     pub path: PathBuf,
 
