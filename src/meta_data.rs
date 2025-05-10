@@ -14,14 +14,16 @@ pub struct MetaData {
 
 pub struct ContextResponse {
     pub name: String,
+    pub url: String,
     pub status_code: StatusCode,
     pub text: String,
 }
 
 impl ContextResponse {
-    pub fn new(name: String, status_code: StatusCode, text: String) -> Self {
+    pub fn new(name: String, url: String, status_code: StatusCode, text: String) -> Self {
         Self {
             name,
+            url,
             status_code,
             text,
         }
