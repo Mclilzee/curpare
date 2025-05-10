@@ -1,13 +1,16 @@
 mod args;
 mod meta_data;
 
+use std::io::Write;
+
 use anyhow::{Context, Result, bail};
 use args::Args;
 use clap::Parser;
 use meta_data::{ContextResponse, MetaData};
-use prettydiff::diff_lines;
+use prettydiff::{diff_lines, diff_slice, diff_words, owo_colors::OwoColorize};
 use reqwest::{Client, Response};
 use serde::Deserialize;
+use serde_json::Value;
 use tokio::task::JoinHandle;
 
 #[tokio::main]
@@ -33,25 +36,24 @@ async fn main() -> Result<()> {
         handles.push(handle);
     }
 
+    let mut responses = vec![];
     for handle in handles {
         let result = handle.await.expect("Failed to unlock ansync handle");
         match result {
-            (Ok(left), Ok(right)) => print_content((left, right)),
+            (Ok(left), Ok(right)) => responses.push((left, right)),
             (Err(e), _) => eprintln!("{e}"),
             (_, Err(e)) => eprintln!("{e}"),
         }
     }
+
+    responses.iter().for_each(print_context);
     Ok(())
 }
 
-fn print_content(context: (ContextResponse, ContextResponse)) {
-    println!(
-        "{:?}",
-        diff_lines(&context.0.text, &context.1.text)
-            .set_show_lines(true)
-            .names(&context.0.name, &context.1.name)
-            .prettytable()
-    );
+fn print_context(context: &(ContextResponse, ContextResponse)) {
+    let left_json = to_pretty_json(&context.0.text).expect("Json to be formatted properly");
+    let right_json = to_pretty_json(&context.1.text).expect("Json to be formatted properly");
+    println!("{:?}", diff_lines(&left_json, &right_json).prettytable());
 }
 
 async fn get_context_response(client: &Client, data: MetaData) -> Result<ContextResponse> {
@@ -67,4 +69,9 @@ async fn get_context_response(client: &Client, data: MetaData) -> Result<Context
     ))?;
 
     Ok(ContextResponse::new(data.name, data.url, status_code, text))
+}
+
+fn to_pretty_json(str: &str) -> Result<String> {
+    let json: Value = serde_json::from_str(str)?;
+    Ok(serde_json::to_string_pretty(&json)?)
 }
