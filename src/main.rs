@@ -1,17 +1,12 @@
 mod args;
+mod client;
 mod meta_data;
 
-use std::io::Write;
-
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 use args::Args;
 use clap::Parser;
-use meta_data::{ContextResponse, MetaData};
-use prettydiff::{diff_lines, diff_slice, diff_words, owo_colors::OwoColorize};
-use reqwest::{Client, Response};
-use serde::Deserialize;
-use serde_json::Value;
-use tokio::task::JoinHandle;
+use client::Client;
+use meta_data::MetaData;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -20,14 +15,14 @@ async fn main() -> Result<()> {
     let meta_data: Vec<(MetaData, MetaData)> =
         serde_json::from_str(&json).expect("Json is not formatted correctly");
 
-    let client = reqwest::Client::new();
+    let client = Client::new();
     let mut handles = vec![];
     for (left, right) in meta_data.into_iter() {
         let moved_client = client.clone();
         let handle = tokio::spawn({
             async move {
-                let left_context = get_context_response(&moved_client, left).await;
-                let right_context = get_context_response(&moved_client, right).await;
+                let left_context = moved_client.get(left).await;
+                let right_context = moved_client.get(right).await;
 
                 (left_context, right_context)
             }
@@ -46,36 +41,10 @@ async fn main() -> Result<()> {
         }
     }
 
-    responses.iter().for_each(print_context);
+    responses
+        .iter()
+        .map(|(left, right)| left.diff(right))
+        .for_each(|s| println!("{s}"));
+
     Ok(())
-}
-
-fn print_context(context: &(ContextResponse, ContextResponse)) {
-    println!(
-        "{}:{} | {}:{}",
-        context.0.name, context.0.url, context.1.name, context.1.url
-    );
-    let left_json = to_pretty_json(&context.0.text).unwrap_or(context.0.text.clone());
-    let right_json = to_pretty_json(&context.1.text).unwrap_or(context.1.text.clone());
-    println!("{:?}", diff_lines(&left_json, &right_json).prettytable());
-}
-
-async fn get_context_response(client: &Client, data: MetaData) -> Result<ContextResponse> {
-    let response = client.get(&data.url).send().await.context(format!(
-        "Failed to call url {}, for name {}",
-        data.url, data.name
-    ))?;
-
-    let status_code = response.status();
-    let text = response.text().await.context(format!(
-        "Return body from {}, {} is not correct",
-        data.url, data.name
-    ))?;
-
-    Ok(ContextResponse::new(data.name, data.url, status_code, text))
-}
-
-fn to_pretty_json(str: &str) -> Result<String> {
-    let json: Value = serde_json::from_str(str)?;
-    Ok(serde_json::to_string_pretty(&json)?)
 }
