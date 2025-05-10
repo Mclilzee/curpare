@@ -2,7 +2,7 @@ mod args;
 mod client;
 mod meta_data;
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use args::Args;
 use clap::Parser;
 use client::Client;
@@ -21,6 +21,7 @@ async fn main() -> Result<()> {
         let moved_client = client.clone();
         let handle = tokio::spawn({
             async move {
+                println!("Sending requests to {left}, and {right}");
                 let left_context = moved_client.get(left).await;
                 let right_context = moved_client.get(right).await;
 
@@ -41,10 +42,11 @@ async fn main() -> Result<()> {
         }
     }
 
+    println!("All requests has responded, printing differences");
+
     responses
         .iter()
         .map(|(left, right)| left.diff(right))
         .for_each(|s| println!("{s}"));
-
     Ok(())
 }

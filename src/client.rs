@@ -19,16 +19,18 @@ impl Client {
     }
 
     pub async fn get(&self, data: MetaData) -> Result<Response> {
-        let response = self.client.get(&data.url).send().await.context(format!(
-            "Failed to call Name({}), URL({})",
-            data.name, data.url
-        ))?;
+        let response = self
+            .client
+            .get(&data.url)
+            .send()
+            .await
+            .context(format!("Failed to call {data}",))?;
 
         let status_code = response.status();
-        let text = response.text().await.context(format!(
-            "Return body from Name({}), URL({}) is corrupted",
-            data.name, data.url,
-        ))?;
+        let text = response
+            .text()
+            .await
+            .context(format!("Return body for {data} is corrupted"))?;
 
         Ok(Response::new(data.name, data.url, status_code, text))
     }
@@ -53,12 +55,8 @@ impl Response {
 
     pub fn diff(&self, other: &Response) -> String {
         format!(
-            "{}:{}|{}:{}\n{:?}",
-            self.name,
-            self.url,
-            other.name,
-            other.url,
-            diff_lines(&self.to_string(), &other.to_string()).prettytable()
+            "{}@{} => {}@{}\n{}",
+            self.name, self.url, other.name, other.url, self
         )
     }
 }
