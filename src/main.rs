@@ -1,3 +1,5 @@
+#![warn(clippy::all, clippy::pedantic)]
+
 mod args;
 mod client;
 mod meta_data;
@@ -17,7 +19,7 @@ async fn main() -> Result<()> {
 
     let client = Client::new();
     let mut handles = vec![];
-    for (left, right) in meta_data.into_iter() {
+    for (left, right) in meta_data {
         let moved_client = client.clone();
         let handle = tokio::spawn({
             async move {
@@ -37,8 +39,7 @@ async fn main() -> Result<()> {
         let result = handle.await.expect("Failed to unlock ansync handle");
         match result {
             (Ok(left), Ok(right)) => responses.push((left, right)),
-            (Err(e), _) => eprintln!("{e}"),
-            (_, Err(e)) => eprintln!("{e}"),
+            (Err(e), _) | (_, Err(e)) => eprintln!("{e}"),
         }
     }
 

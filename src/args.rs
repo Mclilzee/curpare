@@ -13,7 +13,7 @@ pub struct Args {
     /// each object will be formatted in this format
     ///{
     ///name:"name of the comparison",
-    ///url: "https://example.com",
+    ///url: "<https://example.com>",
     ///ignore: "regex to ignore lines that matches"
     ///json: boolean, if set to true it will format the json
     /// cached: boolean, will cache the call to be used again
