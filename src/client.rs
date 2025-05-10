@@ -1,7 +1,6 @@
 use std::fmt::Display;
 
 use anyhow::{Context, Result};
-use prettydiff::diff_lines;
 use serde_json::Value;
 
 use crate::meta_data::MetaData;
@@ -19,9 +18,16 @@ impl Client {
     }
 
     pub async fn get(&self, data: MetaData) -> Result<Response> {
-        let response = self
-            .client
-            .get(&data.url)
+        let mut request = self.client.get(&data.url);
+        if let Some(user) = &data.user {
+            request = request.basic_auth(user, data.password.as_ref());
+        }
+
+        if let Some(token) = &data.token {
+            request = request.bearer_auth(token);
+        }
+
+        let response = request
             .send()
             .await
             .context(format!("Failed to call {data}",))?;
