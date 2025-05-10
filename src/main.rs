@@ -51,8 +51,12 @@ async fn main() -> Result<()> {
 }
 
 fn print_context(context: &(ContextResponse, ContextResponse)) {
-    let left_json = to_pretty_json(&context.0.text).expect("Json to be formatted properly");
-    let right_json = to_pretty_json(&context.1.text).expect("Json to be formatted properly");
+    println!(
+        "{}:{} | {}:{}",
+        context.0.name, context.0.url, context.1.name, context.1.url
+    );
+    let left_json = to_pretty_json(&context.0.text).unwrap_or(context.0.text.clone());
+    let right_json = to_pretty_json(&context.1.text).unwrap_or(context.1.text.clone());
     println!("{:?}", diff_lines(&left_json, &right_json).prettytable());
 }
 
