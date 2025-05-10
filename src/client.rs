@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use anyhow::{Context, Result};
 use prettydiff::diff_lines;
 use serde_json::Value;
@@ -50,20 +52,23 @@ impl Response {
     }
 
     pub fn diff(&self, other: &Response) -> String {
-        let left_json = Self::to_pretty_json(&self.text).unwrap_or(self.text.clone());
-        let right_json = Self::to_pretty_json(&other.text).unwrap_or(other.text.clone());
         format!(
             "{}:{}|{}:{}\n{:?}",
             self.name,
             self.url,
             other.name,
             other.url,
-            diff_lines(&left_json, &right_json).prettytable()
+            diff_lines(&self.to_string(), &other.to_string()).prettytable()
         )
     }
+}
 
-    fn to_pretty_json(str: &str) -> Result<String> {
-        let json: Value = serde_json::from_str(str)?;
-        Ok(serde_json::to_string_pretty(&json)?)
+impl Display for Response {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let text = serde_json::from_str::<Value>(&self.text)
+            .and_then(|value| serde_json::to_string_pretty(&value))
+            .unwrap_or(self.text.clone());
+
+        write!(f, "Status Code: {}\n{})", self.status_code, text)
     }
 }
