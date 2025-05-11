@@ -24,7 +24,7 @@ impl Client {
         let left_response = self.get(requests.left).await?;
         let right_response = self.get(requests.right).await?;
 
-        Ok(Response::new(left_response, right_response))
+        Ok(Response::new(requests.name, left_response, right_response))
     }
 
     async fn get(&self, part_request: PartRequestConfig) -> Result<PartResponse> {
@@ -37,27 +37,16 @@ impl Client {
             request = request.bearer_auth(token);
         }
 
-        let response = request
-            .send()
-            .await
-            .context(format!("Failed to call {part_request}",))?;
+        let response = request.send().await?;
 
         let status_code = response.status();
-        let mut text = response
-            .text()
-            .await
-            .context(format!("Return body for {part_request} is corrupted"))?;
+        let mut text = response.text().await?;
 
         if let Some(ignore_lines) = part_request.ignore_lines.as_ref() {
             text = Self::filter(text, ignore_lines);
         }
 
-        Ok(PartResponse::new(
-            part_request.name,
-            part_request.url,
-            status_code,
-            text,
-        ))
+        Ok(PartResponse::new(part_request.url, status_code, text))
     }
 
     fn filter(text: String, ignore_list: &[String]) -> String {
