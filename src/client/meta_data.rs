@@ -26,6 +26,7 @@ impl Display for RequestsConfig {
 pub struct PartRequestConfig {
     pub url: String,
     pub ignore_lines: Option<Vec<String>>,
+    #[serde(default)]
     pub cached: bool,
     pub user: Option<String>,
     pub password: Option<String>,
