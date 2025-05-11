@@ -2,13 +2,11 @@
 
 mod args;
 mod client;
-mod meta_data;
 
 use anyhow::Result;
 use args::Args;
 use clap::Parser;
-use client::Client;
-use meta_data::{RequestsConfig, Response};
+use client::{Client, RequestsConfig, Response};
 
 #[tokio::main]
 async fn main() -> Result<()> {

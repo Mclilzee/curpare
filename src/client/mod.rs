@@ -1,10 +1,9 @@
-use anyhow::{Context, Result};
-use serde_json::Value;
+mod meta_data;
 
-use crate::meta_data::PartRequestConfig;
-use crate::meta_data::PartResponse;
-use crate::meta_data::RequestsConfig;
-use crate::meta_data::Response;
+use anyhow::{Context, Result};
+use meta_data::{PartRequestConfig, PartResponse};
+pub use meta_data::{RequestsConfig, Response};
+use serde_json::Value;
 
 #[derive(Clone)]
 pub struct Client {
