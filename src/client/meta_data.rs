@@ -20,7 +20,7 @@ impl Display for RequestsConfig {
 pub struct PartRequestConfig {
     pub url: String,
     pub ignore_lines: Option<Vec<String>>,
-    pub cached: Option<bool>,
+    pub cached: bool,
     pub user: Option<String>,
     pub password: Option<String>,
     pub token: Option<String>,
@@ -45,6 +45,7 @@ impl Response {
     }
 }
 
+#[derive(Clone)]
 pub struct PartResponse {
     pub url: String,
     pub status_code: u16,

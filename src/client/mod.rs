@@ -1,20 +1,27 @@
+mod clients;
 mod meta_data;
 
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
+
 use anyhow::{Context, Result};
+use clients::CachelesClient;
 use meta_data::{PartRequestConfig, PartResponse};
 pub use meta_data::{RequestsConfig, Response};
 use serde_json::Value;
 
 #[derive(Clone)]
 pub struct Client {
-    client: reqwest::Client,
+    client: 
+
 }
 
 impl Client {
     pub fn new() -> Self {
-        Self {
-            client: reqwest::Client::new(),
-        }
+        Self { CachelessClient(CachelesClient::new()) }
+    }
+
+    pub fn new_cached(cache_location: PathBuf) -> Result<Self> {
+        todo!();
     }
 
     pub async fn get_response(&self, requests: RequestsConfig) -> Result<Response> {
@@ -25,6 +32,10 @@ impl Client {
     }
 
     async fn get(&self, part_request: PartRequestConfig) -> Result<PartResponse> {
+        self.get_from_url(part_request).await
+    }
+
+    async fn get_from_url(&self, part_request: PartRequestConfig) -> Result<PartResponse> {
         let mut request = self.client.get(&part_request.url);
         if let Some(user) = &part_request.user {
             request = request.basic_auth(user, part_request.password.as_ref());
