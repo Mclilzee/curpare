@@ -3,7 +3,7 @@ mod meta_data;
 
 use std::{
     collections::HashMap,
-    fs::{self, File, exists},
+    fs::{self, File, create_dir_all, exists},
     io::{BufReader, Read},
     path::{Path, PathBuf},
     sync::Arc,
@@ -28,6 +28,12 @@ impl Client {
     }
 
     pub fn new_cached(cache_location: &Path) -> Result<Self> {
+        if let Some(parent) = cache_location.parent() {
+            let _ = create_dir_all(parent).with_context(|| {
+                format!("Failed to create sub directories for path {cache_location:?}")
+            });
+        }
+
         let file = if !cache_location
             .try_exists()
             .with_context(|| format!("Couldn't access file for path {:?}", cache_location))?
