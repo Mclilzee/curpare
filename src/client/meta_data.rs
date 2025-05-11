@@ -9,6 +9,12 @@ pub struct RequestsConfig {
     pub right: PartRequestConfig,
 }
 
+impl RequestsConfig {
+    pub fn requires_cache(&self) -> bool {
+        self.left.cached || self.right.cached
+    }
+}
+
 impl Display for RequestsConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}: {} => {}", self.name, self.left.url, self.right.url)

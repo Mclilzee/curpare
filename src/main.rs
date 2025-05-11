@@ -3,7 +3,9 @@
 mod args;
 mod client;
 
-use anyhow::Result;
+use std::path::PathBuf;
+
+use anyhow::{Context, Result};
 use args::Args;
 use clap::Parser;
 use client::{Client, RequestsConfig, Response};
@@ -15,7 +17,13 @@ async fn main() -> Result<()> {
     let meta_data: Vec<RequestsConfig> =
         serde_json::from_str(&json).expect("Json is not formatted correctly");
 
-    get_responses(meta_data)
+    let client = if meta_data.iter().any(|config| config.requires_cache()) {
+        Client::new_cached("./cache".into()).context("Failed to load cache")?
+    } else {
+        Client::new()
+    };
+
+    get_responses(&client, meta_data)
         .await
         .iter()
         .map(|response| response.diff().to_string())
@@ -24,8 +32,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn get_responses(meta_data: Vec<RequestsConfig>) -> Vec<Response> {
-    let client = Client::new();
+async fn get_responses(client: &Client, meta_data: Vec<RequestsConfig>) -> Vec<Response> {
     let mut handles = vec![];
     for request in meta_data {
         let moved_client = client.clone();
