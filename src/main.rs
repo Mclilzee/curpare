@@ -20,7 +20,7 @@ async fn main() -> Result<()> {
     get_responses(meta_data)
         .await
         .iter()
-        .map(|response| response.diff())
+        .map(|response| response.diff().to_string())
         .for_each(|s| println!("{s}"));
 
     Ok(())
@@ -33,7 +33,7 @@ async fn get_responses(meta_data: Vec<RequestsConfig>) -> Vec<Response> {
         let moved_client = client.clone();
         let handle = tokio::spawn({
             async move {
-                println!("Sending requests to {request}");
+                println!("Sending request for {request}");
                 moved_client.get_response(request).await
             }
         });
@@ -51,5 +51,6 @@ async fn get_responses(meta_data: Vec<RequestsConfig>) -> Vec<Response> {
     }
 
     println!("All requests has been processed");
+    println!("================================================");
     responses
 }

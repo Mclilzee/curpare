@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use anyhow::{Context, Result};
 use serde_json::Value;
 
@@ -10,13 +8,13 @@ use crate::meta_data::Response;
 
 #[derive(Clone)]
 pub struct Client {
-    inner: reqwest::Client,
+    client: reqwest::Client,
 }
 
 impl Client {
     pub fn new() -> Self {
         Self {
-            inner: reqwest::Client::new(),
+            client: reqwest::Client::new(),
         }
     }
 
@@ -28,7 +26,7 @@ impl Client {
     }
 
     async fn get(&self, part_request: PartRequestConfig) -> Result<PartResponse> {
-        let mut request = self.inner.get(&part_request.url);
+        let mut request = self.client.get(&part_request.url);
         if let Some(user) = &part_request.user {
             request = request.basic_auth(user, part_request.password.as_ref());
         }
@@ -37,10 +35,16 @@ impl Client {
             request = request.bearer_auth(token);
         }
 
-        let response = request.send().await?;
+        let response = request.send().await.context(format!(
+            "Failed sending request to URL {}",
+            part_request.url
+        ))?;
 
         let status_code = response.status();
-        let mut text = response.text().await?;
+        let mut text = response.text().await.context(format!(
+            "Failed extracting body for URL {}",
+            part_request.url
+        ))?;
 
         if let Some(ignore_lines) = part_request.ignore_lines.as_ref() {
             text = Self::filter(text, ignore_lines);

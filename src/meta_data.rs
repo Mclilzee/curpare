@@ -11,11 +11,7 @@ pub struct RequestsConfig {
 
 impl Display for RequestsConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Name: {}, Left: {}, Right: {}",
-            self.name, self.left.url, self.right.url
-        )
+        write!(f, "{}: {} => {}", self.name, self.left.url, self.right.url)
     }
 }
 
@@ -43,8 +39,8 @@ impl Response {
 
     pub fn diff(&self) -> String {
         format!(
-            "{} => {}\n{}",
-            self.left.url, self.right.url, self.left.text
+            "{}: {} => {}\n{}",
+            self.name, self.left.url, self.right.url, self.left
         )
     }
 }
@@ -62,5 +58,11 @@ impl PartResponse {
             status_code: status_code.into(),
             text,
         }
+    }
+}
+
+impl Display for PartResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Status code {}\n{}", self.status_code, self.text)
     }
 }
