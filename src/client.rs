@@ -38,7 +38,7 @@ impl Client {
             .await
             .context(format!("Return body for {data} is corrupted"))?;
 
-        if let Some(ignore_lines) = data.ignore.as_ref() {
+        if let Some(ignore_lines) = data.ignore_lines.as_ref() {
             text = Self::filter(text, ignore_lines);
         }
 

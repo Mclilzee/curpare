@@ -3,10 +3,11 @@ use std::fmt::Display;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct MetaData {
     pub name: String,
     pub url: String,
-    pub ignore: Option<Vec<String>>,
+    pub ignore_lines: Option<Vec<String>>,
     pub cached: Option<bool>,
     pub user: Option<String>,
     pub password: Option<String>,
