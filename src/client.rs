@@ -33,12 +33,29 @@ impl Client {
             .context(format!("Failed to call {data}",))?;
 
         let status_code = response.status();
-        let text = response
+        let mut text = response
             .text()
             .await
             .context(format!("Return body for {data} is corrupted"))?;
 
+        if let Some(ignore_lines) = data.ignore.as_ref() {
+            text = Self::filter(text, ignore_lines);
+        }
+
         Ok(Response::new(data.name, data.url, status_code, text))
+    }
+
+    fn filter(text: String, ignore_list: &[String]) -> String {
+        serde_json::from_str::<Value>(&text)
+            .and_then(|value| serde_json::to_string_pretty(&value))
+            .unwrap_or(text)
+            .lines()
+            .filter(|&line| Self::ignore_line(line, ignore_list))
+            .collect()
+    }
+
+    fn ignore_line(line: &str, ignore_lines: &[String]) -> bool {
+        ignore_lines.iter().any(|ignore| line.contains(ignore))
     }
 }
 
@@ -69,10 +86,6 @@ impl Response {
 
 impl Display for Response {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let text = serde_json::from_str::<Value>(&self.text)
-            .and_then(|value| serde_json::to_string_pretty(&value))
-            .unwrap_or(self.text.clone());
-
-        write!(f, "Status Code: {}\n{})", self.status_code, text)
+        write!(f, "Status Code: {}\n{})", self.status_code, self.text)
     }
 }
