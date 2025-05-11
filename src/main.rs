@@ -7,7 +7,7 @@ mod meta_data;
 use anyhow::Result;
 use args::Args;
 use clap::Parser;
-use client::Client;
+use client::{Client, Response};
 use meta_data::MetaData;
 
 #[tokio::main]
@@ -17,6 +17,16 @@ async fn main() -> Result<()> {
     let meta_data: Vec<(MetaData, MetaData)> =
         serde_json::from_str(&json).expect("Json is not formatted correctly");
 
+    let responses = get_responses(meta_data).await;
+    println!("All requests has responded, printing differences");
+    responses
+        .iter()
+        .map(|(left, right)| left.diff(right))
+        .for_each(|s| println!("{s}"));
+    Ok(())
+}
+
+async fn get_responses(meta_data: Vec<(MetaData, MetaData)>) -> Vec<(Response, Response)> {
     let client = Client::new();
     let mut handles = vec![];
     for (left, right) in meta_data {
@@ -43,11 +53,5 @@ async fn main() -> Result<()> {
         }
     }
 
-    println!("All requests has responded, printing differences");
-
     responses
-        .iter()
-        .map(|(left, right)| left.diff(right))
-        .for_each(|s| println!("{s}"));
-    Ok(())
 }
