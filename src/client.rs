@@ -7,18 +7,18 @@ use crate::meta_data::MetaData;
 
 #[derive(Clone)]
 pub struct Client {
-    client: reqwest::Client,
+    inner: reqwest::Client,
 }
 
 impl Client {
     pub fn new() -> Self {
         Self {
-            client: reqwest::Client::new(),
+            inner: reqwest::Client::new(),
         }
     }
 
     pub async fn get(&self, data: MetaData) -> Result<Response> {
-        let mut request = self.client.get(&data.url);
+        let mut request = self.inner.get(&data.url);
         if let Some(user) = &data.user {
             request = request.basic_auth(user, data.password.as_ref());
         }
@@ -55,7 +55,7 @@ impl Client {
     }
 
     fn ignore_line(line: &str, ignore_lines: &[String]) -> bool {
-        ignore_lines.iter().any(|ignore| line.contains(ignore))
+        !ignore_lines.iter().any(|ignore| line.contains(ignore))
     }
 }
 
