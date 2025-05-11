@@ -3,7 +3,8 @@ use std::fmt::Display;
 use anyhow::{Context, Result};
 use serde_json::Value;
 
-use crate::meta_data::MetaData;
+use crate::meta_data::PartRequestConfig;
+use crate::meta_data::RequestsConfig;
 
 #[derive(Clone)]
 pub struct Client {
@@ -17,32 +18,41 @@ impl Client {
         }
     }
 
-    pub async fn get(&self, data: MetaData) -> Result<Response> {
-        let mut request = self.inner.get(&data.url);
-        if let Some(user) = &data.user {
-            request = request.basic_auth(user, data.password.as_ref());
+    pub async fn get_response(&self, requests: RequestsConfig) {
+        todo!()
+    }
+
+    pub async fn get(&self, part_request: PartRequestConfig) -> Result<Response> {
+        let mut request = self.inner.get(&part_request.url);
+        if let Some(user) = &part_request.user {
+            request = request.basic_auth(user, part_request.password.as_ref());
         }
 
-        if let Some(token) = &data.token {
+        if let Some(token) = &part_request.token {
             request = request.bearer_auth(token);
         }
 
         let response = request
             .send()
             .await
-            .context(format!("Failed to call {data}",))?;
+            .context(format!("Failed to call {part_request}",))?;
 
         let status_code = response.status();
         let mut text = response
             .text()
             .await
-            .context(format!("Return body for {data} is corrupted"))?;
+            .context(format!("Return body for {part_request} is corrupted"))?;
 
-        if let Some(ignore_lines) = data.ignore_lines.as_ref() {
+        if let Some(ignore_lines) = part_request.ignore_lines.as_ref() {
             text = Self::filter(text, ignore_lines);
         }
 
-        Ok(Response::new(data.name, data.url, status_code, text))
+        Ok(Response::new(
+            part_request.name,
+            part_request.url,
+            status_code,
+            text,
+        ))
     }
 
     fn filter(text: String, ignore_list: &[String]) -> String {

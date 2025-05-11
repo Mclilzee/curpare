@@ -8,36 +8,33 @@ use anyhow::Result;
 use args::Args;
 use clap::Parser;
 use client::{Client, Response};
-use meta_data::MetaData;
+use meta_data::RequestsConfig;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
     let json = std::fs::read_to_string(args.path).expect("Failed to read json file");
-    let meta_data: Vec<(MetaData, MetaData)> =
+    let meta_data: Vec<RequestsConfig> =
         serde_json::from_str(&json).expect("Json is not formatted correctly");
 
-    let responses = get_responses(meta_data).await;
-    println!("All requests has responded, printing differences");
-    responses
+    get_responses(RequestsConfig)
+        .await
         .iter()
-        .map(|(left, right)| left.diff(right))
+        .map(|response| response.diff())
         .for_each(|s| println!("{s}"));
+
     Ok(())
 }
 
-async fn get_responses(meta_data: Vec<(MetaData, MetaData)>) -> Vec<(Response, Response)> {
+async fn get_responses(meta_data: Vec<RequestsConfig>) -> Vec<Response> {
     let client = Client::new();
     let mut handles = vec![];
-    for (left, right) in meta_data {
+    for request in meta_data {
         let moved_client = client.clone();
         let handle = tokio::spawn({
             async move {
-                println!("Sending requests to {left}, and {right}");
-                let left_context = moved_client.get(left).await;
-                let right_context = moved_client.get(right).await;
-
-                (left_context, right_context)
+                println!("Sending requests to {request}");
+                moved_client.get(request).await
             }
         });
 
@@ -48,10 +45,11 @@ async fn get_responses(meta_data: Vec<(MetaData, MetaData)>) -> Vec<(Response, R
     for handle in handles {
         let result = handle.await.expect("Failed to unlock ansync handle");
         match result {
-            (Ok(left), Ok(right)) => responses.push((left, right)),
-            (Err(e), _) | (_, Err(e)) => eprintln!("{e}"),
+            Ok(response) => responses.push(response),
+            Err(e) => eprintln!("{e}"),
         }
     }
 
+    println!("All requests has been processed");
     responses
 }
