@@ -3,7 +3,10 @@
 mod args;
 mod client;
 
-use std::path::PathBuf;
+use std::{
+    path::{Path, PathBuf},
+    process,
+};
 
 use anyhow::{Context, Result};
 use args::Args;
@@ -13,12 +16,13 @@ use client::{Client, RequestsConfig, Response};
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
-    let json = std::fs::read_to_string(args.path).expect("Failed to read json file");
-    let meta_data: Vec<RequestsConfig> =
-        serde_json::from_str(&json).expect("Json is not formatted correctly");
+    let json = std::fs::read_to_string(&args.path).expect("Failed to read json file");
+    let meta_data: Vec<RequestsConfig> = serde_json::from_str(&json)
+        .with_context(|| format!("Json in path {:?} is not formatted correctly", args.path))?;
 
     let client = if meta_data.iter().any(|config| config.requires_cache()) {
-        Client::new_cached("./cache".into()).context("Failed to load cache")?
+        let cache_location = Path::new("./cache").join(args.path.file_name().unwrap());
+        Client::new_cached(&cache_location).context("Failed to load cache")?
     } else {
         Client::new()
     };

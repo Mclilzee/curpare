@@ -52,7 +52,7 @@ impl Response {
     }
 }
 
-#[derive(Clone)]
+#[derive(Deserialize, Clone)]
 pub struct PartResponse {
     pub url: String,
     pub status_code: u16,
