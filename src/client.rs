@@ -4,7 +4,9 @@ use anyhow::{Context, Result};
 use serde_json::Value;
 
 use crate::meta_data::PartRequestConfig;
+use crate::meta_data::PartResponse;
 use crate::meta_data::RequestsConfig;
+use crate::meta_data::Response;
 
 #[derive(Clone)]
 pub struct Client {
@@ -18,11 +20,14 @@ impl Client {
         }
     }
 
-    pub async fn get_response(&self, requests: RequestsConfig) {
-        todo!()
+    pub async fn get_response(&self, requests: RequestsConfig) -> Result<Response> {
+        let left_response = self.get(requests.left).await?;
+        let right_response = self.get(requests.right).await?;
+
+        Ok(Response::new(left_response, right_response))
     }
 
-    pub async fn get(&self, part_request: PartRequestConfig) -> Result<Response> {
+    async fn get(&self, part_request: PartRequestConfig) -> Result<PartResponse> {
         let mut request = self.inner.get(&part_request.url);
         if let Some(user) = &part_request.user {
             request = request.basic_auth(user, part_request.password.as_ref());
@@ -47,7 +52,7 @@ impl Client {
             text = Self::filter(text, ignore_lines);
         }
 
-        Ok(Response::new(
+        Ok(PartResponse::new(
             part_request.name,
             part_request.url,
             status_code,
@@ -66,36 +71,5 @@ impl Client {
 
     fn ignore_line(line: &str, ignore_lines: &[String]) -> bool {
         !ignore_lines.iter().any(|ignore| line.contains(ignore))
-    }
-}
-
-pub struct Response {
-    pub name: String,
-    pub url: String,
-    pub status_code: u16,
-    pub text: String,
-}
-
-impl Response {
-    pub fn new(name: String, url: String, status_code: reqwest::StatusCode, text: String) -> Self {
-        Self {
-            name,
-            url,
-            status_code: status_code.into(),
-            text,
-        }
-    }
-
-    pub fn diff(&self, other: &Response) -> String {
-        format!(
-            "{}@{} => {}@{}\n{}",
-            self.name, self.url, other.name, other.url, self
-        )
-    }
-}
-
-impl Display for Response {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Status Code: {}\n{})", self.status_code, self.text)
     }
 }

@@ -7,8 +7,8 @@ mod meta_data;
 use anyhow::Result;
 use args::Args;
 use clap::Parser;
-use client::{Client, Response};
-use meta_data::RequestsConfig;
+use client::Client;
+use meta_data::{RequestsConfig, Response};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -17,7 +17,7 @@ async fn main() -> Result<()> {
     let meta_data: Vec<RequestsConfig> =
         serde_json::from_str(&json).expect("Json is not formatted correctly");
 
-    get_responses(RequestsConfig)
+    get_responses(meta_data)
         .await
         .iter()
         .map(|response| response.diff())
@@ -34,7 +34,7 @@ async fn get_responses(meta_data: Vec<RequestsConfig>) -> Vec<Response> {
         let handle = tokio::spawn({
             async move {
                 println!("Sending requests to {request}");
-                moved_client.get(request).await
+                moved_client.get_response(request).await
             }
         });
 
