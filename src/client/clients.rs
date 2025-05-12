@@ -1,4 +1,10 @@
-use std::{collections::HashMap, fs::File, io::Write, path::PathBuf, sync::Arc};
+use std::{
+    collections::HashMap,
+    fs::{File, OpenOptions},
+    io::Write,
+    path::PathBuf,
+    sync::Arc,
+};
 
 use super::{
     RequestsConfig, Response,
@@ -121,7 +127,12 @@ impl RequestClient for CachedClient {
 impl Drop for CachedClient {
     fn drop(&mut self) {
         let cache_json = serde_json::to_string(&self.cache).expect("To unwrap");
-        File::open(&self.cache_location)
+
+        OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(&self.cache_location)
             .expect(&format!(
                 "Failed to open file for saving new cache for path {:?}",
                 &self.cache_location
