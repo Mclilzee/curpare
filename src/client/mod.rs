@@ -3,7 +3,7 @@ mod meta_data;
 
 use std::{
     collections::HashMap,
-    fs::{self, File, create_dir_all, exists},
+    fs::{self, File, OpenOptions, create_dir_all, exists},
     io::{BufReader, Read},
     path::{Path, PathBuf},
     sync::Arc,
@@ -13,8 +13,6 @@ use anyhow::{Context, Result, bail};
 use clients::{CachedClient, CachelesClient, RequestClient};
 use meta_data::{PartRequestConfig, PartResponse};
 pub use meta_data::{RequestsConfig, Response};
-use serde::{Deserialize, Deserializer};
-use serde_json::Value;
 
 pub enum Client {
     CachelessClient(CachelesClient),
@@ -33,21 +31,15 @@ impl Client {
             });
         }
 
-        let file = match cache_location.try_exists() {
-            Ok(false) => File::create(&cache_location).with_context(|| {
-                format!("Wasn't able to create file for path {:?}", cache_location)
-            })?,
-            Ok(true) => File::open(&cache_location).with_context(|| {
-                format!("Wasn't able to open file for path {:?}", cache_location)
-            })?,
-            Err(e) => {
-                return Err(anyhow::anyhow!(
-                    "Couldn't access file for path {:?}: {}",
-                    cache_location,
-                    e
-                ));
-            }
-        };
+        let file = OpenOptions::new()
+            .create(true)
+            .read(true)
+            .write(true)
+            .open(&cache_location)
+            .expect(&format!(
+                "Failed to open file for reading cache for path {:?}",
+                &cache_location
+            ));
 
         let reader = BufReader::new(&file);
         let cache: HashMap<String, PartResponse> =
@@ -56,7 +48,7 @@ impl Client {
         Ok(Self::CachedClient(CachedClient::new(cache, cache_location)))
     }
 
-    pub async fn get_response(&self, requests: RequestsConfig) -> Result<Response> {
+    pub async fn get_response(&mut self, requests: RequestsConfig) -> Result<Response> {
         match self {
             Client::CachedClient(client) => client.get_response(requests).await,
             Client::CachelessClient(client) => client.get_response(requests).await,

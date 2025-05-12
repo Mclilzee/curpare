@@ -15,7 +15,7 @@ use serde::Deserialize;
 use serde_json::Value;
 
 pub trait RequestClient {
-    async fn get_response(&self, requests: RequestsConfig) -> Result<Response>;
+    async fn get_response(&mut self, requests: RequestsConfig) -> Result<Response>;
     fn get_client(&self) -> &reqwest::Client;
 
     async fn get_from_url(&self, part_request: PartRequestConfig) -> Result<PartResponse> {
@@ -73,7 +73,7 @@ impl CachelesClient {
     }
 }
 impl RequestClient for CachelesClient {
-    async fn get_response(&self, requests: RequestsConfig) -> Result<Response> {
+    async fn get_response(&mut self, requests: RequestsConfig) -> Result<Response> {
         let left_response = self.get_from_url(requests.left).await?;
         let right_response = self.get_from_url(requests.right).await?;
 
@@ -112,9 +112,21 @@ impl CachedClient {
 }
 
 impl RequestClient for CachedClient {
-    async fn get_response(&self, requests: RequestsConfig) -> Result<Response> {
+    async fn get_response(&mut self, requests: RequestsConfig) -> Result<Response> {
+        let cache_left = requests.left.cached.clone();
+        let cache_right = requests.right.cached.clone();
         let left_response = self.get(requests.left).await?;
         let right_response = self.get(requests.right).await?;
+
+        if cache_left {
+            self.cache
+                .insert(left_response.url.clone(), left_response.clone());
+        }
+
+        if cache_right {
+            self.cache
+                .insert(right_response.url.clone(), right_response.clone());
+        }
 
         Ok(Response::new(requests.name, left_response, right_response))
     }

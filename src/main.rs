@@ -13,6 +13,7 @@ use anyhow::{Context, Result};
 use args::Args;
 use clap::Parser;
 use client::{Client, RequestsConfig, Response};
+use tokio::sync::Mutex;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -39,13 +40,13 @@ async fn main() -> Result<()> {
 
 async fn get_responses(client: Client, meta_data: Vec<RequestsConfig>) -> Vec<Response> {
     let mut handles = vec![];
-    let client = Arc::new(client);
+    let client = Arc::new(Mutex::new(client));
     for request in meta_data {
         let moved_client = client.clone();
         let handle = tokio::spawn({
             async move {
                 println!("Sending request for {request}");
-                moved_client.get_response(request).await
+                moved_client.lock().await.get_response(request).await
             }
         });
 
