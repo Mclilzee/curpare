@@ -16,7 +16,6 @@ pub use meta_data::{RequestsConfig, Response};
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 
-#[derive(Clone)]
 pub enum Client {
     CachelessClient(CachelesClient),
     CachedClient(CachedClient),
@@ -47,11 +46,11 @@ impl Client {
             })?
         };
 
-        let reader = BufReader::new(file);
-        let cache: HashMap<String, PartResponse> = serde_json::from_reader(reader)
-            .with_context(|| format!("Failed to read cache json path {:?}", cache_location))?;
+        let reader = BufReader::new(&file);
+        let cache: HashMap<String, PartResponse> =
+            serde_json::from_reader(reader).unwrap_or_default();
 
-        Ok(Self::CachedClient(CachedClient::new(cache)))
+        Ok(Self::CachedClient(CachedClient::new(cache, file)))
     }
 
     pub async fn get_response(&self, requests: RequestsConfig) -> Result<Response> {

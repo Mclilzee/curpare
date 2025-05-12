@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, fs::File, path::PathBuf, sync::Arc};
 
 use super::{
     RequestsConfig, Response,
@@ -7,7 +7,7 @@ use super::{
 use anyhow::{Context, Result};
 use serde_json::Value;
 
-pub trait RequestClient: Clone {
+pub trait RequestClient {
     async fn get_response(&self, requests: RequestsConfig) -> Result<Response>;
     fn get_client(&self) -> &reqwest::Client;
 
@@ -78,17 +78,18 @@ impl RequestClient for CachelesClient {
     }
 }
 
-#[derive(Clone)]
 pub struct CachedClient {
     client: reqwest::Client,
     cache: Arc<HashMap<String, PartResponse>>,
+    cache_file: File,
 }
 
 impl CachedClient {
-    pub fn new(cache: HashMap<String, PartResponse>) -> Self {
+    pub fn new(cache: HashMap<String, PartResponse>, cache_file: File) -> Self {
         Self {
             client: reqwest::Client::new(),
             cache: cache.into(),
+            cache_file,
         }
     }
 

@@ -6,6 +6,7 @@ mod client;
 use std::{
     path::{Path, PathBuf},
     process,
+    sync::Arc,
 };
 
 use anyhow::{Context, Result};
@@ -27,7 +28,7 @@ async fn main() -> Result<()> {
         Client::new()
     };
 
-    get_responses(&client, meta_data)
+    get_responses(client, meta_data)
         .await
         .iter()
         .map(|response| response.diff().to_string())
@@ -36,8 +37,9 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn get_responses(client: &Client, meta_data: Vec<RequestsConfig>) -> Vec<Response> {
+async fn get_responses(client: Client, meta_data: Vec<RequestsConfig>) -> Vec<Response> {
     let mut handles = vec![];
+    let client = Arc::new(client);
     for request in meta_data {
         let moved_client = client.clone();
         let handle = tokio::spawn({
