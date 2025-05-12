@@ -23,7 +23,7 @@ async fn main() -> Result<()> {
 
     let client = if meta_data.iter().any(|config| config.requires_cache()) {
         let cache_location = Path::new("./cache").join(args.path.file_name().unwrap());
-        Client::new_cached(&cache_location).context("Failed to load cache")?
+        Client::new_cached(cache_location).context("Failed to load cache")?
     } else {
         Client::new()
     };

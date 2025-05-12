@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize)]
 pub struct RequestsConfig {
@@ -52,7 +52,7 @@ impl Response {
     }
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct PartResponse {
     pub url: String,
     pub status_code: u16,

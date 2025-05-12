@@ -1,10 +1,11 @@
-use std::{collections::HashMap, fs::File, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, fs::File, io::Write, path::PathBuf, sync::Arc};
 
 use super::{
     RequestsConfig, Response,
     meta_data::{PartRequestConfig, PartResponse},
 };
 use anyhow::{Context, Result};
+use serde::Deserialize;
 use serde_json::Value;
 
 pub trait RequestClient {
@@ -80,16 +81,16 @@ impl RequestClient for CachelesClient {
 
 pub struct CachedClient {
     client: reqwest::Client,
-    cache: Arc<HashMap<String, PartResponse>>,
-    cache_file: File,
+    cache: HashMap<String, PartResponse>,
+    cache_location: PathBuf,
 }
 
 impl CachedClient {
-    pub fn new(cache: HashMap<String, PartResponse>, cache_file: File) -> Self {
+    pub fn new(cache: HashMap<String, PartResponse>, cache_location: PathBuf) -> Self {
         Self {
             client: reqwest::Client::new(),
             cache: cache.into(),
-            cache_file,
+            cache_location,
         }
     }
 
@@ -114,5 +115,21 @@ impl RequestClient for CachedClient {
 
     fn get_client(&self) -> &reqwest::Client {
         &self.client
+    }
+}
+
+impl Drop for CachedClient {
+    fn drop(&mut self) {
+        let cache_json = serde_json::to_string(&self.cache).expect("To unwrap");
+        File::open(&self.cache_location)
+            .expect(&format!(
+                "Failed to open file for saving new cache for path {:?}",
+                &self.cache_location
+            ))
+            .write_all(cache_json.as_bytes())
+            .expect(&format!(
+                "Failed to save new cache into cache file for path {:?}",
+                &self.cache_location
+            ));
     }
 }
