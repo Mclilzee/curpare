@@ -4,6 +4,7 @@ mod args;
 mod client;
 
 use std::{
+    fs::{self, File, remove_file},
     path::{Path, PathBuf},
     process,
     sync::Arc,
@@ -18,10 +19,20 @@ use tokio::sync::Mutex;
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
+    println!("{:?}", args);
     let meta_data = get_meta_data(&args)?;
-    let client = if meta_data.iter().any(|config| config.requires_cache()) {
-        let cache_location = Path::new("./cache").join(args.path.file_name().unwrap());
-        Client::new_cached(cache_location).context("Failed to load cache")?
+    let requires_caching = meta_data.iter().any(|config| config.requires_cache());
+    let cache_location = get_cache_location(&args.path);
+    if args.clear_cache {
+        let cache_location = cache_location
+            .as_ref()
+            .expect(&format!("Failed to clear cache for path {:?}", args.path));
+        remove_file(cache_location)
+            .with_context(|| format!("Failed to clear cache for path {:?}", cache_location))?;
+    }
+
+    let client = if requires_caching {
+        Client::new_cached(cache_location?).context("Failed to load cache")?
     } else {
         Client::new()
     };
@@ -89,4 +100,8 @@ fn get_meta_data(args: &Args) -> Result<Vec<RequestsConfig>> {
     }
 
     Ok(meta_data)
+}
+
+fn get_cache_location(path: &Path) -> Result<PathBuf> {
+    Ok(Path::new("./cache").join(path.file_name().context("Failed to retreive file name")?))
 }

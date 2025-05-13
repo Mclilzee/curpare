@@ -2,7 +2,7 @@
 use clap::Parser;
 use std::path::PathBuf;
 
-#[derive(Parser)]
+#[derive(Parser, Debug)]
 #[command(
     author,
     version,
