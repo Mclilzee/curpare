@@ -19,7 +19,6 @@ use tokio::sync::Mutex;
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
-    println!("{:?}", args);
     let meta_data = get_meta_data(&args)?;
     let requires_caching = meta_data.iter().any(|config| config.requires_cache());
     let cache_location = get_cache_location(&args.path);
