@@ -88,7 +88,7 @@ impl CachedClient {
     pub fn new(cache: HashMap<String, PartResponse>, cache_location: PathBuf) -> Self {
         Self {
             client: reqwest::Client::new(),
-            cache: cache.into(),
+            cache: cache,
             cache_location,
         }
     }
@@ -106,8 +106,8 @@ impl CachedClient {
 
 impl RequestClient for CachedClient {
     async fn get_response(&mut self, requests: RequestsConfig) -> Result<Response> {
-        let cache_left = requests.left.cached.clone();
-        let cache_right = requests.right.cached.clone();
+        let cache_left = requests.left.cached;
+        let cache_right = requests.right.cached;
         let left_response = self.get(requests.left).await?;
         let right_response = self.get(requests.right).await?;
 
@@ -138,14 +138,18 @@ impl Drop for CachedClient {
             .create(true)
             .truncate(true)
             .open(&self.cache_location)
-            .expect(&format!(
-                "Failed to open file for saving new cache for path {:?}",
-                &self.cache_location
-            ))
+            .unwrap_or_else(|e| {
+                panic!(
+                    "Failed to open file for saving new cache for path {:?}: {e:?}",
+                    &self.cache_location
+                )
+            })
             .write_all(cache_json.as_bytes())
-            .expect(&format!(
-                "Failed to save new cache into cache file for path {:?}",
-                &self.cache_location
-            ));
+            .unwrap_or_else(|e| {
+                panic!(
+                    "Failed to save new cache into cache file for path {:?}: {e:?}",
+                    &self.cache_location
+                )
+            });
     }
 }

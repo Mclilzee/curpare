@@ -26,7 +26,10 @@ impl Client {
     pub fn new_cached(cache_location: PathBuf) -> Result<Self> {
         if let Some(parent) = cache_location.parent() {
             let _ = create_dir_all(parent).with_context(|| {
-                format!("Failed to create sub directories for path {cache_location:?}")
+                format!(
+                    "Failed to create sub directories for path {}",
+                    cache_location.display()
+                )
             });
         }
 
@@ -36,10 +39,12 @@ impl Client {
             .read(true)
             .write(true)
             .open(&cache_location)
-            .expect(&format!(
-                "Failed to open file for reading cache for path {:?}",
-                &cache_location
-            ));
+            .unwrap_or_else(|e| {
+                panic!(
+                    "Failed to open file for reading cache for path {}: {e:?}",
+                    cache_location.display()
+                )
+            });
 
         let reader = BufReader::new(&file);
         let cache: HashMap<String, PartResponse> =
