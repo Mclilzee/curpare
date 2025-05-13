@@ -22,7 +22,15 @@ pub struct Args {
     ///}
     pub path: PathBuf,
 
-    /// Flag to clear the cache before running the program
+    /// Clear old cache for this json config
     #[arg(short = 'c', long = "clear-cache")]
     pub clear_cache: bool,
+
+    /// Cache all the calls for this json config
+    #[arg(short = 'a', long = "all-cache")]
+    pub all_cache: bool,
+
+    /// Don't use cache for any calls for this json config
+    #[arg(short = 'n', long = "no-cache")]
+    pub no_cache: bool,
 }

@@ -13,6 +13,22 @@ impl RequestsConfig {
     pub fn requires_cache(&self) -> bool {
         self.left.cached || self.right.cached
     }
+
+    pub fn with_cache(self) -> Self {
+        Self {
+            left: self.left.with_cache(),
+            right: self.right.with_cache(),
+            ..self
+        }
+    }
+
+    pub fn without_cache(self) -> Self {
+        Self {
+            left: self.left.without_cache(),
+            right: self.right.without_cache(),
+            ..self
+        }
+    }
 }
 
 impl Display for RequestsConfig {
@@ -31,6 +47,22 @@ pub struct PartRequestConfig {
     pub user: Option<String>,
     pub password: Option<String>,
     pub token: Option<String>,
+}
+
+impl PartRequestConfig {
+    fn with_cache(self) -> Self {
+        Self {
+            cached: true,
+            ..self
+        }
+    }
+
+    fn without_cache(self) -> Self {
+        Self {
+            cached: false,
+            ..self
+        }
+    }
 }
 
 pub struct Response {

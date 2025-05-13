@@ -19,11 +19,29 @@ use tokio::sync::Mutex;
 async fn main() -> Result<()> {
     let args = Args::parse();
     let json = std::fs::read_to_string(&args.path).expect("Failed to read json file");
-    let meta_data: Vec<RequestsConfig> = serde_json::from_str(&json)
+    let mut meta_data: Vec<RequestsConfig> = serde_json::from_str(&json)
         .with_context(|| format!("Json in path {:?} is not formatted correctly", args.path))?;
+    if args.all_cache {
+        meta_data = meta_data
+            .into_iter()
+            .map(|meta_data| meta_data.with_cache())
+            .collect();
+    } else if args.no_cache {
+        meta_data = meta_data
+            .into_iter()
+            .map(|meta_data| meta_data.without_cache())
+            .collect();
+    }
 
     let client = if meta_data.iter().any(|config| config.requires_cache()) {
         let cache_location = Path::new("./cache").join(args.path.file_name().unwrap());
+        if args.clear_cache {
+            meta_data = meta_data
+                .into_iter()
+                .map(|meta_data| meta_data.with_cache())
+                .collect();
+        }
+
         Client::new_cached(cache_location).context("Failed to load cache")?
     } else {
         Client::new()
