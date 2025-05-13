@@ -29,6 +29,14 @@ impl RequestsConfig {
             ..self
         }
     }
+
+    pub fn without_ignores(self) -> Self {
+        Self {
+            left: self.left.no_ignores(),
+            right: self.right.no_ignores(),
+            ..self
+        }
+    }
 }
 
 impl Display for RequestsConfig {
@@ -60,6 +68,13 @@ impl PartRequestConfig {
     fn without_cache(self) -> Self {
         Self {
             cached: false,
+            ..self
+        }
+    }
+
+    fn no_ignores(self) -> Self {
+        Self {
+            ignore_lines: None,
             ..self
         }
     }

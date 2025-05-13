@@ -33,4 +33,8 @@ pub struct Args {
     /// Don't use cache for any calls for this json config
     #[arg(short = 'n', long = "no-cache")]
     pub no_cache: bool,
+
+    /// Skip all the ignore lines
+    #[arg(short = 'i', long = "skip-ignore")]
+    pub skip_ignore: bool,
 }

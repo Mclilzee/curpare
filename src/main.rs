@@ -18,21 +18,7 @@ use tokio::sync::Mutex;
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
-    let json = std::fs::read_to_string(&args.path).expect("Failed to read json file");
-    let mut meta_data: Vec<RequestsConfig> = serde_json::from_str(&json)
-        .with_context(|| format!("Json in path {:?} is not formatted correctly", args.path))?;
-    if args.all_cache {
-        meta_data = meta_data
-            .into_iter()
-            .map(|meta_data| meta_data.with_cache())
-            .collect();
-    } else if args.no_cache {
-        meta_data = meta_data
-            .into_iter()
-            .map(|meta_data| meta_data.without_cache())
-            .collect();
-    }
-
+    let meta_data = get_meta_data(&args);
     let client = if meta_data.iter().any(|config| config.requires_cache()) {
         let cache_location = Path::new("./cache").join(args.path.file_name().unwrap());
         if args.clear_cache {
@@ -41,7 +27,6 @@ async fn main() -> Result<()> {
                 .map(|meta_data| meta_data.with_cache())
                 .collect();
         }
-
         Client::new_cached(cache_location).context("Failed to load cache")?
     } else {
         Client::new()
@@ -83,4 +68,31 @@ async fn get_responses(client: Client, meta_data: Vec<RequestsConfig>) -> Vec<Re
     println!("All requests has been processed");
     println!("================================================");
     responses
+}
+
+fn get_meta_data(args: &Args) -> Result<Vec<RequestsConfig>> {
+    let json = std::fs::read_to_string(&args.path).expect("Failed to read json file");
+    let mut meta_data: Vec<RequestsConfig> = serde_json::from_str(&json)
+        .with_context(|| format!("Json in path {:?} is not formatted correctly", args.path))?;
+
+    if args.skip_ignore {
+        meta_data = meta_data
+            .into_iter()
+            .map(|meta_data| meta_data.without_ignores())
+            .collect();
+    }
+
+    if args.all_cache {
+        meta_data = meta_data
+            .into_iter()
+            .map(|meta_data| meta_data.with_cache())
+            .collect();
+    } else if args.no_cache {
+        meta_data = meta_data
+            .into_iter()
+            .map(|meta_data| meta_data.without_cache())
+            .collect();
+    }
+
+    Ok(meta_data)
 }
