@@ -18,15 +18,9 @@ use tokio::sync::Mutex;
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
-    let meta_data = get_meta_data(&args);
+    let meta_data = get_meta_data(&args)?;
     let client = if meta_data.iter().any(|config| config.requires_cache()) {
         let cache_location = Path::new("./cache").join(args.path.file_name().unwrap());
-        if args.clear_cache {
-            meta_data = meta_data
-                .into_iter()
-                .map(|meta_data| meta_data.with_cache())
-                .collect();
-        }
         Client::new_cached(cache_location).context("Failed to load cache")?
     } else {
         Client::new()
