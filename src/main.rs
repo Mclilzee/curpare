@@ -4,9 +4,8 @@ mod args;
 mod client;
 
 use std::{
-    fs::{self, File, remove_file},
+    fs::remove_file,
     path::{Path, PathBuf},
-    process,
     sync::Arc,
 };
 
@@ -20,14 +19,18 @@ use tokio::sync::Mutex;
 async fn main() -> Result<()> {
     let args = Args::parse();
     let meta_data = get_meta_data(&args)?;
-    let requires_caching = meta_data.iter().any(|config| config.requires_cache());
+    let requires_caching = meta_data.iter().any(RequestsConfig::requires_cache);
     let cache_location = get_cache_location(&args.path);
     if args.clear_cache {
         let cache_location = cache_location
             .as_ref()
             .expect(&format!("Failed to clear cache for path {:?}", args.path));
-        remove_file(cache_location)
-            .with_context(|| format!("Failed to clear cache for path {:?}", cache_location))?;
+        remove_file(cache_location).with_context(|| {
+            format!(
+                "Failed to clear cache for path {}",
+                cache_location.display()
+            )
+        })?;
     }
 
     let client = if requires_caching {
@@ -76,25 +79,29 @@ async fn get_responses(client: Client, meta_data: Vec<RequestsConfig>) -> Vec<Re
 
 fn get_meta_data(args: &Args) -> Result<Vec<RequestsConfig>> {
     let json = std::fs::read_to_string(&args.path).expect("Failed to read json file");
-    let mut meta_data: Vec<RequestsConfig> = serde_json::from_str(&json)
-        .with_context(|| format!("Json in path {:?} is not formatted correctly", args.path))?;
+    let mut meta_data: Vec<RequestsConfig> = serde_json::from_str(&json).with_context(|| {
+        format!(
+            "Json in path {} is not formatted correctly",
+            args.path.display()
+        )
+    })?;
 
     if args.skip_ignore {
         meta_data = meta_data
             .into_iter()
-            .map(|meta_data| meta_data.without_ignores())
+            .map(RequestsConfig::without_ignores)
             .collect();
     }
 
     if args.all_cache {
         meta_data = meta_data
             .into_iter()
-            .map(|meta_data| meta_data.with_cache())
+            .map(RequestsConfig::with_cache)
             .collect();
     } else if args.no_cache {
         meta_data = meta_data
             .into_iter()
-            .map(|meta_data| meta_data.without_cache())
+            .map(RequestsConfig::without_cache)
             .collect();
     }
 

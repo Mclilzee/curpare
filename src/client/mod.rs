@@ -3,15 +3,14 @@ mod meta_data;
 
 use std::{
     collections::HashMap,
-    fs::{self, File, OpenOptions, create_dir_all, exists},
-    io::{BufReader, Read},
-    path::{Path, PathBuf},
-    sync::Arc,
+    fs::{OpenOptions, create_dir_all},
+    io::BufReader,
+    path::PathBuf,
 };
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 use clients::{CachedClient, CachelesClient, RequestClient};
-use meta_data::{PartRequestConfig, PartResponse};
+use meta_data::PartResponse;
 pub use meta_data::{RequestsConfig, Response};
 
 pub enum Client {

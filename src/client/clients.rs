@@ -1,17 +1,10 @@
-use std::{
-    collections::HashMap,
-    fs::{File, OpenOptions},
-    io::Write,
-    path::PathBuf,
-    sync::Arc,
-};
+use std::{collections::HashMap, fs::OpenOptions, io::Write, path::PathBuf};
 
 use super::{
     RequestsConfig, Response,
     meta_data::{PartRequestConfig, PartResponse},
 };
 use anyhow::{Context, Result};
-use serde::Deserialize;
 use serde_json::Value;
 
 pub trait RequestClient {
