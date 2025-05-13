@@ -32,6 +32,7 @@ impl Client {
 
         let file = OpenOptions::new()
             .create(true)
+            .truncate(true)
             .read(true)
             .write(true)
             .open(&cache_location)

@@ -24,7 +24,7 @@ async fn main() -> Result<()> {
     if args.clear_cache {
         let cache_location = cache_location
             .as_ref()
-            .expect(&format!("Failed to clear cache for path {:?}", args.path));
+            .expect(&format!("Failed to clear cache for path {}", args.path.display()));
         remove_file(cache_location).with_context(|| {
             format!(
                 "Failed to clear cache for path {}",
