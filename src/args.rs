@@ -1,4 +1,4 @@
-#![allow(clippy::doc_markdown)]
+#![allow(clippy::doc_markdown, clippy::struct_excessive_bools)]
 use clap::Parser;
 use std::path::PathBuf;
 

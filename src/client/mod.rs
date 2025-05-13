@@ -39,12 +39,12 @@ impl Client {
             .read(true)
             .write(true)
             .open(&cache_location)
-            .unwrap_or_else(|e| {
-                panic!(
-                    "Failed to open file for reading cache for path {}: {e:?}",
+            .with_context(|| {
+                format!(
+                    "Failed to open file for reading cache for path {}",
                     cache_location.display()
                 )
-            });
+            })?;
 
         let reader = BufReader::new(&file);
         let cache: HashMap<String, PartResponse> =

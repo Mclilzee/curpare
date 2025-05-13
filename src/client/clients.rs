@@ -88,7 +88,7 @@ impl CachedClient {
     pub fn new(cache: HashMap<String, PartResponse>, cache_location: PathBuf) -> Self {
         Self {
             client: reqwest::Client::new(),
-            cache: cache,
+            cache,
             cache_location,
         }
     }
@@ -140,15 +140,15 @@ impl Drop for CachedClient {
             .open(&self.cache_location)
             .unwrap_or_else(|e| {
                 panic!(
-                    "Failed to open file for saving new cache for path {:?}: {e:?}",
-                    &self.cache_location
+                    "Failed to open file for saving new cache for path {}: {e:?}",
+                    self.cache_location.display()
                 )
             })
             .write_all(cache_json.as_bytes())
             .unwrap_or_else(|e| {
                 panic!(
-                    "Failed to save new cache into cache file for path {:?}: {e:?}",
-                    &self.cache_location
+                    "Failed to save new cache into cache file for path {}: {e:?}",
+                    self.cache_location.display()
                 )
             });
     }
