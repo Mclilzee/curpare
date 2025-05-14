@@ -92,12 +92,12 @@ fn print_differences(response: &Response) {
         response.name, response.left.url, response.right.url
     );
     let mut left_file = NamedTempFile::new().expect("Failed to create temp file");
-    let _ = left_file
+    let () = left_file
         .write_all(response.left.to_string().as_bytes())
         .expect("Failed to write to temp file");
 
     let mut right_file = NamedTempFile::new().expect("Failed to create temp file");
-    let _ = right_file
+    let () = right_file
         .write_all(response.right.to_string().as_bytes())
         .expect("Failed to write to temp file");
 
@@ -107,12 +107,12 @@ fn print_differences(response: &Response) {
         .output()
         .expect("Failed to run delta");
 
-    if !output.status.success() {
-        eprintln!("Command Delta failed with status: {}", output.status);
-        eprintln!("Stderr: {}", String::from_utf8_lossy(&output.stderr));
-    } else {
+    if output.status.success() {
         let output_str =
             String::from_utf8(output.stdout).expect("Failed to convert output to string");
         println!("{output_str}");
+    } else {
+        eprintln!("Command Delta failed with status: {}", output.status);
+        eprintln!("Stderr: {}", String::from_utf8_lossy(&output.stderr));
     }
 }

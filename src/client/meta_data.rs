@@ -1,5 +1,5 @@
-use std::fmt::Display;
 use serde::{Deserialize, Serialize};
+use std::fmt::Display;
 
 #[derive(Deserialize)]
 pub struct RequestsConfig {
@@ -108,8 +108,8 @@ impl PartResponse {
     }
 }
 
-impl ToString for PartResponse {
-    fn to_string(&self) -> String {
-        format!("Status code {}\n{}", self.status_code, self.text)
+impl Display for PartResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Status code {}\n{}", self.status_code, self.text)
     }
 }
