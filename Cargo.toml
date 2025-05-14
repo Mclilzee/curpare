@@ -6,7 +6,6 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.98"
 clap = { version = "4.5.37", features = ["derive"] }
-prettydiff = "0.8.0"
 reqwest = "0.12.15"
 serde = { version = "1.0.219", features = ["derive"] }
 serde-html = "0.0.1"

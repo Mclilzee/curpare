@@ -1,7 +1,4 @@
 use std::fmt::Display;
-
-use anyhow::Result;
-use prettydiff::{diff_lines, diff_words};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize)]

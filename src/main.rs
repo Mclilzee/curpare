@@ -15,7 +15,7 @@ use anyhow::{Context, Result};
 use args::Args;
 use clap::Parser;
 use client::{Client, RequestsConfig, Response};
-use tempfile::{NamedTempFile, spooled_tempfile, tempfile};
+use tempfile::NamedTempFile;
 use tokio::sync::Mutex;
 
 #[tokio::main]
