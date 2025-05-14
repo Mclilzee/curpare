@@ -5,7 +5,9 @@ mod client;
 
 use std::{
     fs::remove_file,
+    io::Write,
     path::{Path, PathBuf},
+    process::Command,
     sync::Arc,
 };
 
@@ -13,18 +15,22 @@ use anyhow::{Context, Result};
 use args::Args;
 use clap::Parser;
 use client::{Client, RequestsConfig, Response};
+use tempfile::{NamedTempFile, spooled_tempfile, tempfile};
 use tokio::sync::Mutex;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
-    let meta_data = get_meta_data(&args)?;
-    let requires_caching = meta_data.iter().any(RequestsConfig::requires_cache);
+    let configs: Vec<RequestsConfig> = (&args).try_into()?;
+    let requires_caching = configs.iter().any(RequestsConfig::requires_cache);
     let cache_location = get_cache_location(&args.path);
     if args.clear_cache {
-        let cache_location = cache_location
-            .as_ref()
-            .unwrap_or_else(|e| panic!("Failed to clear cache for path {}: {e:?}", args.path.display()));
+        let cache_location = cache_location.as_ref().unwrap_or_else(|e| {
+            panic!(
+                "Failed to clear cache for path {}: {e:?}",
+                args.path.display()
+            )
+        });
         remove_file(cache_location).with_context(|| {
             format!(
                 "Failed to clear cache for path {}",
@@ -39,11 +45,10 @@ async fn main() -> Result<()> {
         Client::new()
     };
 
-    get_responses(client, meta_data)
+    get_responses(client, configs)
         .await
         .iter()
-        .map(|response| response.diff().to_string())
-        .for_each(|s| println!("{s}"));
+        .for_each(print_differences);
 
     Ok(())
 }
@@ -77,37 +82,37 @@ async fn get_responses(client: Client, meta_data: Vec<RequestsConfig>) -> Vec<Re
     responses
 }
 
-fn get_meta_data(args: &Args) -> Result<Vec<RequestsConfig>> {
-    let json = std::fs::read_to_string(&args.path).expect("Failed to read json file");
-    let mut meta_data: Vec<RequestsConfig> = serde_json::from_str(&json).with_context(|| {
-        format!(
-            "Json in path {} is not formatted correctly",
-            args.path.display()
-        )
-    })?;
-
-    if args.skip_ignore {
-        meta_data = meta_data
-            .into_iter()
-            .map(RequestsConfig::without_ignores)
-            .collect();
-    }
-
-    if args.all_cache {
-        meta_data = meta_data
-            .into_iter()
-            .map(RequestsConfig::with_cache)
-            .collect();
-    } else if args.no_cache {
-        meta_data = meta_data
-            .into_iter()
-            .map(RequestsConfig::without_cache)
-            .collect();
-    }
-
-    Ok(meta_data)
-}
-
 fn get_cache_location(path: &Path) -> Result<PathBuf> {
     Ok(Path::new("./cache").join(path.file_name().context("Failed to retreive file name")?))
+}
+
+fn print_differences(response: &Response) {
+    println!(
+        "{}: {} => {}",
+        response.name, response.left.url, response.right.url
+    );
+    let mut left_file = NamedTempFile::new().expect("Failed to create temp file");
+    let _ = left_file
+        .write_all(response.left.to_string().as_bytes())
+        .expect("Failed to write to temp file");
+
+    let mut right_file = NamedTempFile::new().expect("Failed to create temp file");
+    let _ = right_file
+        .write_all(response.right.to_string().as_bytes())
+        .expect("Failed to write to temp file");
+
+    let output = Command::new("delta")
+        .arg(left_file.path())
+        .arg(right_file.path())
+        .output()
+        .expect("Failed to run delta");
+
+    if !output.status.success() {
+        eprintln!("Command Delta failed with status: {}", output.status);
+        eprintln!("Stderr: {}", String::from_utf8_lossy(&output.stderr));
+    } else {
+        let output_str =
+            String::from_utf8(output.stdout).expect("Failed to convert output to string");
+        println!("{output_str}");
+    }
 }

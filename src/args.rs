@@ -1,6 +1,9 @@
 #![allow(clippy::doc_markdown, clippy::struct_excessive_bools)]
+use anyhow::{Context, Error};
 use clap::Parser;
 use std::path::PathBuf;
+
+use crate::client::RequestsConfig;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -37,4 +40,40 @@ pub struct Args {
     /// Skip all the ignore lines
     #[arg(short = 'i', long = "skip-ignore")]
     pub skip_ignore: bool,
+}
+
+impl TryFrom<&Args> for Vec<RequestsConfig> {
+    type Error = Error;
+
+    fn try_from(args: &Args) -> Result<Self, Self::Error> {
+        let json = std::fs::read_to_string(&args.path).expect("Failed to read json file");
+        let mut meta_data: Vec<RequestsConfig> =
+            serde_json::from_str(&json).with_context(|| {
+                format!(
+                    "Json in path {} is not formatted correctly",
+                    args.path.display()
+                )
+            })?;
+
+        if args.skip_ignore {
+            meta_data = meta_data
+                .into_iter()
+                .map(RequestsConfig::without_ignores)
+                .collect();
+        }
+
+        if args.all_cache {
+            meta_data = meta_data
+                .into_iter()
+                .map(RequestsConfig::with_cache)
+                .collect();
+        } else if args.no_cache {
+            meta_data = meta_data
+                .into_iter()
+                .map(RequestsConfig::without_cache)
+                .collect();
+        }
+
+        Ok(meta_data)
+    }
 }

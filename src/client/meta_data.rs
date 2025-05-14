@@ -1,5 +1,7 @@
 use std::fmt::Display;
 
+use anyhow::Result;
+use prettydiff::{diff_lines, diff_words};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize)]
@@ -82,20 +84,13 @@ impl PartRequestConfig {
 
 pub struct Response {
     pub name: String,
-    left: PartResponse,
-    right: PartResponse,
+    pub left: PartResponse,
+    pub right: PartResponse,
 }
 
 impl Response {
     pub fn new(name: String, left: PartResponse, right: PartResponse) -> Self {
         Self { name, left, right }
-    }
-
-    pub fn diff(&self) -> String {
-        format!(
-            "{}: {} => {}\n{}",
-            self.name, self.left.url, self.right.url, self.left
-        )
     }
 }
 
@@ -116,8 +111,8 @@ impl PartResponse {
     }
 }
 
-impl Display for PartResponse {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Status code {}\n{}", self.status_code, self.text)
+impl ToString for PartResponse {
+    fn to_string(&self) -> String {
+        format!("Status code {}\n{}", self.status_code, self.text)
     }
 }
