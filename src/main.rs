@@ -105,14 +105,10 @@ fn print_differences(response: &Response) {
         .arg(left_file.path())
         .arg(right_file.path())
         .output()
+        .ok()
+        .map(|output| output.stdout)
+        .and_then(|out| String::from_utf8(out).ok())
         .expect("Failed to run delta");
 
-    if output.status.success() {
-        let output_str =
-            String::from_utf8(output.stdout).expect("Failed to convert output to string");
-        println!("{output_str}");
-    } else {
-        eprintln!("Command Delta failed with status: {}", output.status);
-        eprintln!("Stderr: {}", String::from_utf8_lossy(&output.stderr));
-    }
+    println!("{output}");
 }

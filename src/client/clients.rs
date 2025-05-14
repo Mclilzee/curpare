@@ -1,8 +1,8 @@
 use std::{collections::HashMap, fs::OpenOptions, io::Write, path::PathBuf};
 
 use super::{
-    RequestsConfig, Response,
-    meta_data::{PartRequestConfig, PartResponse},
+    request::{PartRequestConfig, RequestsConfig},
+    response::{PartResponse, Response},
 };
 use anyhow::{Context, Result};
 use serde_json::Value;

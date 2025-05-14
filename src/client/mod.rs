@@ -1,5 +1,6 @@
 mod clients;
-mod meta_data;
+mod request;
+mod response;
 
 use std::{
     collections::HashMap,
@@ -10,8 +11,9 @@ use std::{
 
 use anyhow::{Context, Result};
 use clients::{CachedClient, CachelesClient, RequestClient};
-use meta_data::PartResponse;
-pub use meta_data::{RequestsConfig, Response};
+pub use request::RequestsConfig;
+use response::PartResponse;
+pub use response::Response;
 
 pub enum Client {
     CachelessClient(CachelesClient),
