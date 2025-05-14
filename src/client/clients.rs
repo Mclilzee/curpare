@@ -30,6 +30,7 @@ pub trait RequestClient {
         let mut text = response
             .text()
             .await
+            .map(Self::pretty_format)
             .with_context(|| format!("Failed extracting body for URL {}", part_request.url))?;
 
         if let Some(ignore_lines) = part_request.ignore_lines.as_ref() {
@@ -39,11 +40,14 @@ pub trait RequestClient {
         Ok(PartResponse::new(part_request.url, status_code, text))
     }
 
-    fn filter(text: String, ignore_list: &[String]) -> String {
+    fn pretty_format(text: String) -> String {
         serde_json::from_str::<Value>(&text)
             .and_then(|value| serde_json::to_string_pretty(&value))
             .unwrap_or(text)
-            .lines()
+    }
+
+    fn filter(text: String, ignore_list: &[String]) -> String {
+        text.lines()
             .filter(|&line| Self::ignore_line(line, ignore_list))
             .collect()
     }
