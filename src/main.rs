@@ -45,11 +45,22 @@ async fn main() -> Result<()> {
         Client::new()
     };
 
-    get_responses(client, configs)
+    let (terminal_width, _) = term_size::dimensions().unwrap_or((100, 100));
+    let text_to_print = get_responses(client, configs)
         .await
         .iter()
-        .for_each(print_differences);
+        .map(|response| {
+            format!(
+                "{}: {} => {}\n{}",
+                response.name,
+                response.left.url,
+                response.right.url,
+                get_delta_result(&response.left.text, &response.right.text, terminal_width)
+            )
+        })
+        .collect::<String>();
 
+    println!("{text_to_print}");
     Ok(())
 }
 
@@ -86,29 +97,24 @@ fn get_cache_location(path: &Path) -> Result<PathBuf> {
     Ok(Path::new("./cache").join(path.file_name().context("Failed to retreive file name")?))
 }
 
-fn print_differences(response: &Response) {
-    println!(
-        "{}: {} => {}",
-        response.name, response.left.url, response.right.url
-    );
+fn get_delta_result(left: &str, right: &str, width: usize) -> String {
     let mut left_file = NamedTempFile::new().expect("Failed to create temp file");
     let () = left_file
-        .write_all(response.left.to_string().as_bytes())
+        .write_all(left.as_bytes())
         .expect("Failed to write to temp file");
 
     let mut right_file = NamedTempFile::new().expect("Failed to create temp file");
     let () = right_file
-        .write_all(response.right.to_string().as_bytes())
+        .write_all(right.as_bytes())
         .expect("Failed to write to temp file");
 
-    let output = Command::new("delta")
+    Command::new("delta")
         .arg(left_file.path())
         .arg(right_file.path())
+        .arg(format!("--width={}", width - 10))
         .output()
         .ok()
         .map(|output| output.stdout)
         .and_then(|out| String::from_utf8(out).ok())
-        .expect("Failed to run delta");
-
-    println!("{output}");
+        .expect("Failed to run delta")
 }
