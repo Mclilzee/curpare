@@ -47,7 +47,7 @@ async fn main() -> Result<()> {
     };
 
     let (terminal_width, _) = term_size::dimensions().unwrap_or((100, 100));
-    let text = get_responses(client, configs)
+    let text_to_print = get_responses(client, configs)
         .await
         .iter()
         .map(|response| {
@@ -62,12 +62,11 @@ async fn main() -> Result<()> {
         .collect::<String>();
 
     PrettyPrinter::new()
-        .input_from_bytes(text.as_bytes())
+        .input_from_bytes(text_to_print.as_bytes())
         .paging_mode(bat::PagingMode::QuitIfOneScreen)
         .print()
         .unwrap();
 
-    println!("{text_to_print}");
     Ok(())
 }
 
@@ -118,7 +117,7 @@ fn get_delta_result(left: &str, right: &str, width: usize) -> String {
     Command::new("delta")
         .arg(left_file.path())
         .arg(right_file.path())
-        .arg(format!("--width={}", width - 10))
+        .arg(format!("--width={width}"))
         .output()
         .ok()
         .map(|output| output.stdout)
