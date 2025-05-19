@@ -6,6 +6,7 @@ mod client;
 use std::{
     fs::remove_file,
     io::Write,
+    fmt::Write as FmtWrite,
     path::{Path, PathBuf},
     process::Command,
     sync::Arc,
@@ -47,19 +48,21 @@ async fn main() -> Result<()> {
     };
 
     let (terminal_width, _) = term_size::dimensions().unwrap_or((100, 100));
-    let text_to_print = get_responses(client, configs)
-        .await
-        .iter()
-        .map(|response| {
-            format!(
-                "{}: {} => {}\n{}",
-                response.name,
-                response.left.url,
-                response.right.url,
-                get_delta_result(&response.left.text, &response.right.text, terminal_width)
-            )
-        })
-        .collect::<String>();
+    let text_to_print =
+        get_responses(client, configs)
+            .await
+            .iter()
+            .fold(String::new(), |mut output, response| {
+                let _ = write!(
+                    output,
+                    "{}: {} => {}\n{}",
+                    response.name,
+                    response.left.url,
+                    response.right.url,
+                    get_delta_result(&response.left.text, &response.right.text, terminal_width)
+                );
+                output
+            });
 
     PrettyPrinter::new()
         .input_from_bytes(text_to_print.as_bytes())
