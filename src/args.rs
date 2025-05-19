@@ -19,7 +19,7 @@ pub struct Args {
     ///{{n}
     ///  name:"name of the comparison",{n}
     ///  url: "https://example.com",{n}
-    ///  ignore: "regex to ignore lines that matches",{n}
+    ///  ignore_lines:[] An array of text. If the line contains this text it will be ignored{n}
     ///  json: boolean # if set to true it will format the json,{n}
     ///  cached: boolean # will cache the call to be used again{n}
     ///}
