@@ -4,9 +4,9 @@ mod args;
 mod client;
 
 use std::{
+    fmt::Write as FmtWrite,
     fs::remove_file,
     io::Write,
-    fmt::Write as FmtWrite,
     path::{Path, PathBuf},
     process::Command,
     sync::Arc,
@@ -120,6 +120,7 @@ fn get_delta_result(left: &str, right: &str, width: usize) -> String {
     Command::new("delta")
         .arg(left_file.path())
         .arg(right_file.path())
+        .arg("--default-language=json")
         .arg(format!("--width={width}"))
         .output()
         .ok()
