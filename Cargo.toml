@@ -2,6 +2,7 @@
 name = "curpare"
 version = "0.1.0"
 edition = "2024"
+author = "Emad Ali"
 
 [dependencies]
 anyhow = "1.0.98"
