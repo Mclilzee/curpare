@@ -13,6 +13,7 @@ use std::{
 
 use anyhow::{Context, Result};
 use args::Args;
+use bat::PrettyPrinter;
 use clap::Parser;
 use client::{Client, RequestsConfig, Response};
 use tempfile::NamedTempFile;
@@ -45,10 +46,17 @@ async fn main() -> Result<()> {
         Client::new()
     };
 
+<<<<<<< HEAD
     let (terminal_width, _) = term_size::dimensions().unwrap_or((100, 100));
     let text_to_print = get_responses(client, configs)
+||||||| parent of 664a44a (Add bat)
+    get_responses(client, configs)
+=======
+    let text = get_responses(client, configs)
+>>>>>>> 664a44a (Add bat)
         .await
         .iter()
+<<<<<<< HEAD
         .map(|response| {
             format!(
                 "{}: {} => {}\n{}",
@@ -59,6 +67,18 @@ async fn main() -> Result<()> {
             )
         })
         .collect::<String>();
+||||||| parent of 664a44a (Add bat)
+        .for_each(print_differences);
+=======
+        .map(get_diff)
+        .collect::<String>();
+
+    PrettyPrinter::new()
+        .input_from_bytes(text.as_bytes())
+        .paging_mode(bat::PagingMode::QuitIfOneScreen)
+        .print()
+        .unwrap();
+>>>>>>> 664a44a (Add bat)
 
     println!("{text_to_print}");
     Ok(())
@@ -97,7 +117,17 @@ fn get_cache_location(path: &Path) -> Result<PathBuf> {
     Ok(Path::new("./cache").join(path.file_name().context("Failed to retreive file name")?))
 }
 
+<<<<<<< HEAD
 fn get_delta_result(left: &str, right: &str, width: usize) -> String {
+||||||| parent of 664a44a (Add bat)
+fn print_differences(response: &Response) {
+    println!(
+        "{}: {} => {}",
+        response.name, response.left.url, response.right.url
+    );
+=======
+fn get_diff(response: &Response) -> String {
+>>>>>>> 664a44a (Add bat)
     let mut left_file = NamedTempFile::new().expect("Failed to create temp file");
     let () = left_file
         .write_all(left.as_bytes())
@@ -116,5 +146,18 @@ fn get_delta_result(left: &str, right: &str, width: usize) -> String {
         .ok()
         .map(|output| output.stdout)
         .and_then(|out| String::from_utf8(out).ok())
+<<<<<<< HEAD
         .expect("Failed to run delta")
+||||||| parent of 664a44a (Add bat)
+        .expect("Failed to run delta");
+
+    println!("{output}");
+=======
+        .expect("Failed to run delta");
+
+    format!(
+        "{}: {} => {}\n{output}\n",
+        response.name, response.left.url, response.right.url
+    )
+>>>>>>> 664a44a (Add bat)
 }
