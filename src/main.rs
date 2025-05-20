@@ -128,5 +128,5 @@ fn get_delta_result(left: &str, right: &str, width: usize) -> String {
         .ok()
         .map(|output| output.stdout)
         .and_then(|out| String::from_utf8(out).ok())
-        .expect("Failed to run delta")
+        .expect("Failed to run delta, make sure you have `git-delta` from `https://github.com/dandavison/delta` installed")
 }
