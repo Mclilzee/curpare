@@ -10,6 +10,7 @@ use std::{
     path::{Path, PathBuf},
     process::Command,
     sync::Arc,
+    time::Duration,
 };
 
 use anyhow::{Context, Result};
@@ -17,6 +18,7 @@ use args::Args;
 use bat::PrettyPrinter;
 use clap::Parser;
 use client::{Client, RequestsConfig, Response};
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use tempfile::NamedTempFile;
 use tokio::sync::Mutex;
 
@@ -76,29 +78,35 @@ async fn main() -> Result<()> {
 async fn get_responses(client: Client, meta_data: Vec<RequestsConfig>) -> Vec<Response> {
     let mut handles = vec![];
     let client = Arc::new(Mutex::new(client));
+    let progress_bar = ProgressBar::new(meta_data.len() as u64);
     for request in meta_data {
         let moved_client = client.clone();
-        let handle = tokio::spawn({
-            async move {
-                println!("Sending request for {request}");
-                moved_client.lock().await.get_response(request).await
-            }
-        });
+        let handle =
+            tokio::spawn(async move { moved_client.lock().await.get_response(request).await });
 
         handles.push(handle);
     }
 
+    progress_bar.set_style(
+        ProgressStyle::with_template(
+            "[{elapsed_precise}] {wide_bar:.cyan/blue} {pos:>7}/{len:7} Sending request for: {msg} ",
+        )
+        .unwrap(),
+    );
     let mut responses = vec![];
     for handle in handles {
         let result = handle.await.expect("Failed to unlock ansync handle");
+        progress_bar.inc(1);
         match result {
-            Ok(response) => responses.push(response),
+            Ok(response) => {
+                progress_bar.set_message(response.name.to_string());
+                responses.push(response);
+            }
             Err(e) => eprintln!("{e}"),
         }
     }
+    progress_bar.finish();
 
-    println!("All requests has been processed");
-    println!("================================================");
     responses
 }
 
