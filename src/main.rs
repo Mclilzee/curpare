@@ -122,6 +122,8 @@ fn get_delta_result(left: &str, right: &str, width: usize) -> String {
         .arg(right_file.path())
         .arg("--default-language=json")
         .arg(format!("--width={width}"))
+        .arg("--file-style=omit")
+        .arg("-s")
         .output()
         .ok()
         .map(|output| output.stdout)
