@@ -10,7 +10,6 @@ use std::{
     path::{Path, PathBuf},
     process::Command,
     sync::Arc,
-    time::Duration,
 };
 
 use anyhow::{Context, Result};
@@ -18,7 +17,7 @@ use args::Args;
 use bat::PrettyPrinter;
 use clap::Parser;
 use client::{Client, RequestsConfig, Response};
-use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use indicatif::{ProgressBar, ProgressStyle};
 use tempfile::NamedTempFile;
 use tokio::sync::Mutex;
 
