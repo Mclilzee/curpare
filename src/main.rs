@@ -30,16 +30,19 @@ async fn main() -> Result<()> {
     if args.clear_cache {
         let cache_location = cache_location.as_ref().unwrap_or_else(|e| {
             panic!(
-                "Failed to clear cache for path {}: {e:?}",
+                "Failed to handle cache location for path {}: {e:?}",
                 args.path.display()
             )
         });
-        remove_file(cache_location).with_context(|| {
-            format!(
-                "Failed to clear cache for path {}",
-                cache_location.display()
-            )
-        })?;
+
+        if cache_location.exists() {
+            remove_file(cache_location).with_context(|| {
+                format!(
+                    "Failed to clear cache for path {}",
+                    cache_location.display()
+                )
+            })?;
+        }
     }
 
     let client = if requires_caching {
