@@ -105,8 +105,8 @@ async fn get_responses(client: Client, meta_data: Vec<RequestsConfig>) -> Vec<Re
             Err(e) => eprintln!("{e}"),
         }
     }
-    progress_bar.finish();
 
+    progress_bar.finish();
     responses
 }
 

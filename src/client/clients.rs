@@ -135,7 +135,7 @@ impl RequestClient for CachedClient {
 
 impl Drop for CachedClient {
     fn drop(&mut self) {
-        let cache_json = serde_json::to_string(&self.cache).expect("To unwrap");
+        let cache_json = serde_json::to_vec(&self.cache).expect("To unwrap");
 
         OpenOptions::new()
             .write(true)
@@ -148,7 +148,7 @@ impl Drop for CachedClient {
                     self.cache_location.display()
                 )
             })
-            .write_all(cache_json.as_bytes())
+            .write_all(&cache_json)
             .unwrap_or_else(|e| {
                 panic!(
                     "Failed to save new cache into cache file for path {}: {e:?}",
