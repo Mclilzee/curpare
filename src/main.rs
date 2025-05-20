@@ -102,7 +102,7 @@ async fn get_responses(client: Client, meta_data: Vec<RequestsConfig>) -> Vec<Re
                 progress_bar.set_message(response.name.to_string());
                 responses.push(response);
             }
-            Err(e) => eprintln!("{e}"),
+            Err(e) => eprintln!("{e:?}"),
         }
     }
 
