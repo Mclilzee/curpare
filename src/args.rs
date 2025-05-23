@@ -1,7 +1,8 @@
 #![allow(clippy::doc_markdown, clippy::struct_excessive_bools)]
 use anyhow::{Context, Error};
 use clap::Parser;
-use std::path::PathBuf;
+use reqwest::Request;
+use std::{collections::HashMap, error::request_ref, path::PathBuf};
 
 use crate::client::RequestsConfig;
 
@@ -55,25 +56,28 @@ impl TryFrom<&Args> for Vec<RequestsConfig> {
                 )
             })?;
 
-        if args.skip_ignore {
-            meta_data = meta_data
-                .into_iter()
-                .map(RequestsConfig::without_ignores)
-                .collect();
-        }
+        let envs: HashMap<String, String> = std::env::vars().collect();
+        for config in meta_data.iter_mut() {
+            if args.skip_ignore {
+                config.left.ignore_lines = None;
+                config.right.ignore_lines = None;
+            }
 
-        if args.all_cache {
-            meta_data = meta_data
-                .into_iter()
-                .map(RequestsConfig::with_cache)
-                .collect();
-        } else if args.no_cache {
-            meta_data = meta_data
-                .into_iter()
-                .map(RequestsConfig::without_cache)
-                .collect();
+            if args.all_cache {
+                config.left.cached = true;
+                config.right.cached = true;
+            } else if args.no_cache {
+                config.left.cached = false;
+                config.right.cached = false;
+            }
+
+            process_env_variables(config, &envs);
         }
 
         Ok(meta_data)
     }
+}
+
+fn process_env_variables(config: &mut RequestsConfig, envs: &HashMap<String, String>) {
+    if config.left.url.contains("{}");
 }
