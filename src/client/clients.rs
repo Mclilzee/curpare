@@ -50,7 +50,8 @@ pub trait RequestClient {
     fn filter(text: String, ignore_list: &[String]) -> String {
         text.lines()
             .filter(|&line| Self::ignore_line(line, ignore_list))
-            .collect()
+            .collect::<Vec<&str>>()
+            .join("\n")
     }
 
     fn ignore_line(line: &str, ignore_lines: &[String]) -> bool {
