@@ -1,8 +1,9 @@
 #![allow(clippy::doc_markdown, clippy::struct_excessive_bools)]
 use anyhow::{Context, Error};
 use clap::Parser;
+use dotenv::dotenv;
 use reqwest::Request;
-use std::{collections::HashMap, error::request_ref, path::PathBuf};
+use std::{collections::HashMap, mem::replace, path::PathBuf};
 
 use crate::client::RequestsConfig;
 
@@ -56,8 +57,9 @@ impl TryFrom<&Args> for Vec<RequestsConfig> {
                 )
             })?;
 
+        dotenv().ok();
         let envs: HashMap<String, String> = std::env::vars().collect();
-        for config in meta_data.iter_mut() {
+        for config in &mut meta_data {
             if args.skip_ignore {
                 config.left.ignore_lines = None;
                 config.right.ignore_lines = None;
@@ -79,5 +81,25 @@ impl TryFrom<&Args> for Vec<RequestsConfig> {
 }
 
 fn process_env_variables(config: &mut RequestsConfig, envs: &HashMap<String, String>) {
-    if config.left.url.contains("{}");
+    let replacement = replace_env_placeholder("{HELLO} world htpes::{STEIN}-testblabla", envs);
+    println!("{replacement}");
+}
+
+fn replace_env_placeholder(str: &str, envs: &HashMap<String, String>) -> String {
+    let mut chars = str.chars();
+    let mut replacement: Vec<char> = vec![];
+    while let Some(c) = chars.next() {
+        if c == '{' {
+            let env_variable: String = chars.by_ref().take_while(|&char| char != '}').collect();
+            let new_val: String = envs
+                .get(&env_variable)
+                .map_or_else(|| format!("{{{env_variable}}}"), Into::into);
+
+            replacement.extend(new_val.chars());
+        } else {
+            replacement.push(c);
+        }
+    }
+
+    replacement.iter().collect()
 }
