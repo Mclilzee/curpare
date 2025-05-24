@@ -4,7 +4,7 @@ use clap::Parser;
 use dotenv::dotenv;
 use std::{collections::HashMap, path::PathBuf};
 
-use crate::client::RequestsConfig;
+use crate::client::{Config, RequestsConfig};
 
 #[derive(Parser, Debug)]
 #[command(
@@ -43,7 +43,7 @@ pub struct Args {
     pub skip_ignore: bool,
 }
 
-impl TryFrom<&Args> for Vec<RequestsConfig> {
+impl TryFrom<&Args> for Config {
     type Error = Error;
 
     fn try_from(args: &Args) -> Result<Self, Self::Error> {
@@ -53,30 +53,31 @@ impl TryFrom<&Args> for Vec<RequestsConfig> {
             .map(|json| process_env_variables(&json, &envs))
             .expect("Failed to read json file");
 
-        let mut meta_data: Vec<RequestsConfig> =
-            serde_json::from_str(&json).with_context(|| {
-                format!(
-                    "Json in path {} is not formatted correctly",
-                    args.path.display()
-                )
-            })?;
+        let mut config: Config = serde_json::from_str(&json).with_context(|| {
+            format!(
+                "Json in path {} is not formatted correctly",
+                args.path.display()
+            )
+        })?;
 
-        for config in &mut meta_data {
+        for request_config in &mut config.requests {
+
+            request_config.left.ignore_lines.extend(config.ignore_lines);
             if args.skip_ignore {
-                config.left.ignore_lines = None;
-                config.right.ignore_lines = None;
+                request_config.left.ignore_lines = None;
+                request_config.right.ignore_lines = None;
             }
 
             if args.all_cache {
-                config.left.cached = true;
-                config.right.cached = true;
+                request_config.left.cached = true;
+                request_config.right.cached = true;
             } else if args.no_cache {
-                config.left.cached = false;
-                config.right.cached = false;
+                request_config.left.cached = false;
+                request_config.right.cached = false;
             }
         }
 
-        Ok(meta_data)
+        Ok(config)
     }
 }
 

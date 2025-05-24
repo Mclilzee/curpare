@@ -11,7 +11,7 @@ use std::{
 
 use anyhow::{Context, Result};
 use clients::{CachedClient, CachelesClient, RequestClient};
-pub use request::RequestsConfig;
+pub use request::Config;
 use response::PartResponse;
 pub use response::Response;
 
