@@ -2,8 +2,7 @@
 use anyhow::{Context, Error};
 use clap::Parser;
 use dotenv::dotenv;
-use reqwest::Request;
-use std::{collections::HashMap, mem::replace, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf};
 
 use crate::client::RequestsConfig;
 
@@ -85,14 +84,21 @@ fn process_env_variables(str: &str, envs: &HashMap<String, String>) -> String {
     let mut chars = str.chars();
     let mut replacement: Vec<char> = vec![];
     while let Some(c) = chars.next() {
-        if c == '{' {
-            let env_variable: String = chars.by_ref().take_while(|&char| char != '}').collect();
-            let new_val: String = envs
-                .get(&env_variable)
-                .map_or_else(|| format!("{{{env_variable}}}"), Into::into);
+        if c == '$' {
+            if let Some(next_char) = chars.next() {
+                if next_char == '{' {
+                    let env_variable: String =
+                        chars.by_ref().take_while(|&char| char != '}').collect();
+                    let new_val: String = envs.get(&env_variable).unwrap_or_else(|| panic!(
+                        "Env variable {env_variable}, is not found. Make sure to provide it or add it to `.env`"
+                    )).to_string();
 
-            println!("Trying to replace {env_variable}");
-            replacement.extend(new_val.chars());
+                    replacement.extend(new_val.chars());
+                } else {
+                    replacement.push(c);
+                    replacement.push(next_char);
+                }
+            }
         } else {
             replacement.push(c);
         }
