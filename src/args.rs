@@ -48,7 +48,12 @@ impl TryFrom<&Args> for Vec<RequestsConfig> {
     type Error = Error;
 
     fn try_from(args: &Args) -> Result<Self, Self::Error> {
-        let json = std::fs::read_to_string(&args.path).expect("Failed to read json file");
+        dotenv().ok();
+        let envs: HashMap<String, String> = std::env::vars().collect();
+        let json = std::fs::read_to_string(&args.path)
+            .map(|json| process_env_variables(&json, &envs))
+            .expect("Failed to read json file");
+
         let mut meta_data: Vec<RequestsConfig> =
             serde_json::from_str(&json).with_context(|| {
                 format!(
@@ -57,8 +62,6 @@ impl TryFrom<&Args> for Vec<RequestsConfig> {
                 )
             })?;
 
-        dotenv().ok();
-        let envs: HashMap<String, String> = std::env::vars().collect();
         for config in &mut meta_data {
             if args.skip_ignore {
                 config.left.ignore_lines = None;
@@ -72,20 +75,13 @@ impl TryFrom<&Args> for Vec<RequestsConfig> {
                 config.left.cached = false;
                 config.right.cached = false;
             }
-
-            process_env_variables(config, &envs);
         }
 
         Ok(meta_data)
     }
 }
 
-fn process_env_variables(config: &mut RequestsConfig, envs: &HashMap<String, String>) {
-    let replacement = replace_env_placeholder("{HELLO} world htpes::{STEIN}-testblabla", envs);
-    println!("{replacement}");
-}
-
-fn replace_env_placeholder(str: &str, envs: &HashMap<String, String>) -> String {
+fn process_env_variables(str: &str, envs: &HashMap<String, String>) -> String {
     let mut chars = str.chars();
     let mut replacement: Vec<char> = vec![];
     while let Some(c) = chars.next() {
@@ -95,6 +91,7 @@ fn replace_env_placeholder(str: &str, envs: &HashMap<String, String>) -> String 
                 .get(&env_variable)
                 .map_or_else(|| format!("{{{env_variable}}}"), Into::into);
 
+            println!("Trying to replace {env_variable}");
             replacement.extend(new_val.chars());
         } else {
             replacement.push(c);
