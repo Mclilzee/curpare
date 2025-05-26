@@ -4,7 +4,7 @@ use clap::Parser;
 use dotenv::dotenv;
 use std::{collections::HashMap, path::PathBuf};
 
-use crate::client::{Config, RequestsConfig};
+use crate::client::Config;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -61,11 +61,14 @@ impl TryFrom<&Args> for Config {
         })?;
 
         for request_config in &mut config.requests {
-
-            request_config.left.ignore_lines.extend(config.ignore_lines);
             if args.skip_ignore {
-                request_config.left.ignore_lines = None;
-                request_config.right.ignore_lines = None;
+                request_config.left.ignore_lines = vec![];
+                request_config.right.ignore_lines = vec![];
+            } else {
+                request_config
+                    .left
+                    .ignore_lines
+                    .extend(config.ignore_lines.clone());
             }
 
             if args.all_cache {

@@ -16,7 +16,7 @@ use anyhow::{Context, Result};
 use args::Args;
 use bat::PrettyPrinter;
 use clap::Parser;
-use client::{Client, RequestsConfig, Response};
+use client::{Client, Config, Response};
 use indicatif::{ProgressBar, ProgressStyle};
 use tempfile::NamedTempFile;
 use tokio::sync::Mutex;
@@ -24,8 +24,8 @@ use tokio::sync::Mutex;
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
-    let configs: Vec<RequestsConfig> = (&args).try_into()?;
-    let requires_caching = configs.iter().any(RequestsConfig::requires_cache);
+    let configs: Config = (&args).try_into()?;
+    let requires_caching = configs.requires_cache();
     let cache_location = get_cache_location(&args.path);
     if args.clear_cache {
         let cache_location = cache_location.as_ref().unwrap_or_else(|e| {
@@ -77,11 +77,11 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn get_responses(client: Client, meta_data: Vec<RequestsConfig>) -> Vec<Response> {
+async fn get_responses(client: Client, config: Config) -> Vec<Response> {
     let mut handles = vec![];
     let client = Arc::new(Mutex::new(client));
-    let progress_bar = ProgressBar::new(meta_data.len() as u64);
-    for request in meta_data {
+    let progress_bar = ProgressBar::new(config.requests.len() as u64);
+    for request in config.requests {
         let moved_client = client.clone();
         let handle =
             tokio::spawn(async move { moved_client.lock().await.get_response(request).await });

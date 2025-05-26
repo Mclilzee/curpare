@@ -34,8 +34,8 @@ pub trait RequestClient {
             .and_then(|s| Self::pretty_format(&s))
             .with_context(|| format!("Failed extracting body for URL {}", part_request.url))?;
 
-        if let Some(ignore_lines) = part_request.ignore_lines.as_ref() {
-            text = Self::filter(text, ignore_lines);
+        if !part_request.ignore_lines.is_empty() {
+            text = Self::filter(text, &part_request.ignore_lines);
         }
 
         Ok(PartResponse::new(part_request.url, status_code, text))

@@ -8,15 +8,18 @@ pub struct RequestsConfig {
     pub right: PartRequestConfig,
 }
 
+#[derive(Deserialize)]
 pub struct Config {
     #[serde(default)]
-    ignore_lines: Vec<String>,
-    requests: Vec<RequestsConfig>,
+    pub ignore_lines: Vec<String>,
+    pub requests: Vec<RequestsConfig>,
 }
 
-impl RequestsConfig {
+impl Config {
     pub fn requires_cache(&self) -> bool {
-        self.left.cached || self.right.cached
+        self.requests
+            .iter()
+            .any(|r| r.left.cached || r.right.cached)
     }
 }
 
