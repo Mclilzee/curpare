@@ -69,6 +69,11 @@ impl TryFrom<&Args> for Config {
                     .left
                     .ignore_lines
                     .extend(config.ignore_lines.clone());
+
+                request_config
+                    .right
+                    .ignore_lines
+                    .extend(config.ignore_lines.clone());
             }
 
             if args.all_cache {
