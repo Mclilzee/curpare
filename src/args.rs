@@ -14,16 +14,25 @@ use crate::client::Config;
     long_about = "Takes multiple links and compare their results between eachother"
 )]
 pub struct Args {
-    /// Path of the json file format to load for urls configurations. The configuration should be a list of objects each having left, and right.
+    /// Path of the json file format to load for urls configurations. The configuration should be map of a list of requests, each request has name, and an object of left and righta list of objects each having left, and right.
     /// each object will be formatted in this format
     ///
-    ///{{n}
-    ///  name:"name of the comparison",{n}
-    ///  url: "https://example.com",{n}
-    ///  ignore_lines:[] An array of text. If the line contains this text it will be ignored{n}
-    ///  json: boolean # if set to true it will format the json,{n}
-    ///  cached: boolean # will cache the call to be used again{n}
-    ///}
+    ///+ {n}
+    ///+  "ignore_lines": [], An array of strings to be ignored if the line contains them, this ignore lines config is global for all requests{n}
+    ///+  "requests": [{n}
+    ///+    {{n}
+    ///+      name:"", Mandatory name field, a string holding the name of the comparison{n}
+    ///+      "left": {{n}
+    ///+         url: "https://example.com", Mandatory URL field {n}
+    ///+         ignore_lines:[] Optional local ignore_lines{n}
+    ///+         cached: boolean Optional to cache the response and reuse it instead of sending a request again{n}
+    ///+         user: Optional string value if the call requires authentication{n}
+    ///+         password: Optional string value if the call requires authentication{n}
+    ///+         token: Optional token value, if the call requires a token bearer authentication{n}
+    ///+      },{n}
+    ///+      "right": {}, With the same fields and options as "left"{n}
+    ///+    }]{n}
+    ///+ }
     pub path: PathBuf,
 
     /// Clear old cache for this json config
