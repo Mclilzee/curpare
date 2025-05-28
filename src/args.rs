@@ -21,18 +21,20 @@ pub struct Args {
     ///+  "ignore_lines": [], An array of strings to be ignored if the line contains them, this ignore lines config is global for all requests{n}
     ///+  "requests": [{n}
     ///+    {{n}
-    ///+      name:"", Mandatory name field, a string holding the name of the comparison{n}
+    ///+      "name":"", Mandatory name field, a string holding the name of the comparison{n}
     ///+      "left": {{n}
-    ///+         url: "https://example.com", Mandatory URL field {n}
-    ///+         ignore_lines:[] Optional local ignore_lines{n}
-    ///+         cached: boolean Optional to cache the response and reuse it instead of sending a request again{n}
-    ///+         user: Optional string value if the call requires authentication{n}
-    ///+         password: Optional string value if the call requires authentication{n}
-    ///+         token: Optional token value, if the call requires a token bearer authentication{n}
+    ///+         "url": "https://example.com", Mandatory URL field {n}
+    ///+         "ignore_lines":[] Optional local ignore_lines{n}
+    ///+         "cached": boolean Optional to cache the response and reuse it instead of sending a request again{n}
+    ///+         "user": Optional string value if the call requires authentication{n}
+    ///+         "password": Optional string value if the call requires authentication{n}
+    ///+         "token": Optional token value, if the call requires a token bearer authentication{n}
     ///+      },{n}
     ///+      "right": {}, With the same fields and options as "left"{n}
     ///+    }]{n}
-    ///+ }
+    ///+ }{n}
+    /// Environmental variables can be used, either by providing them on the command level or by including them in a `.env` file. to use them inside the json wrap them in a ${}
+    ///  Example: if we have an environmental variable `HOST=https://google.com` and we use `"url": "${HOST}/query` when the program runs it will resolve to `"url": "https://google.com/query`
     pub path: PathBuf,
 
     /// Clear old cache for this json config
