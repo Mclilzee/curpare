@@ -11,7 +11,7 @@ use crate::client::Config;
     author,
     version,
     about,
-    long_about = "Takes multiple links and compare their results between eachother"
+    long_about = "Takes multiple web links and compare their results between eachother"
 )]
 pub struct Args {
     /// Path of the json file format to load for urls configurations. The configuration should be map of a list of requests, each request has name, and an object of left and righta list of objects each having left, and right.

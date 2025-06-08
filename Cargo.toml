@@ -2,7 +2,15 @@
 name = "curpare"
 version = "0.1.0"
 edition = "2024"
-author = "Emad Ali"
+author = ["Emad Ali"]
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/Mclilzee/curpare"
+homepage = "https://github.com/Mclilzee/curpare"
+keywords = ["curl", "compare", "requests", "responses", "diff"]
+description = """
+Takes multiple web links and compare their results between eachother
+"""
 
 [dependencies]
 anyhow = "1.0.98"
