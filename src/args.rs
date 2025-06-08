@@ -33,7 +33,7 @@ pub struct Args {
     ///+      "right": {}, With the same fields and options as "left"{n}
     ///+    }]{n}
     ///+ }{n}
-    /// Environmental variables can be used, either by providing them on the command level or by including them in a `.env` file. to use them inside the json wrap them in a ${}
+    ///  Environmental variables can be used, either by providing them on the command level or by including them in a `.env` file. to use them inside the json wrap them in a ${}
     ///  Example: if we have an environmental variable `HOST=https://google.com` and we use `"url": "${HOST}/query` when the program runs it will resolve to `"url": "https://google.com/query`
     pub path: PathBuf,
 
