@@ -62,7 +62,7 @@ impl TryFrom<&Args> for Config {
         let envs: HashMap<String, String> = std::env::vars().collect();
         let json = std::fs::read_to_string(&args.path)
             .map(|json| process_env_variables(&json, &envs))
-            .expect("Failed to read json file");
+            .map_err(|e| Error::msg(format!("Failed to read {}: {}", args.path.display(), e)))?;
 
         let mut config: Config = serde_json::from_str(&json).with_context(|| {
             format!(
