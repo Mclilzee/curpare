@@ -27,24 +27,21 @@ pub trait RequestClient {
             .with_context(|| format!("Failed sending request to URL {}", part_request.url))?;
 
         let status_code = response.status();
-        let mut text = response
-            .text()
-            .await
-            .map_err(|e| anyhow::anyhow!(e))
-            .and_then(|s| Self::pretty_format(&s))
-            .with_context(|| format!("Failed extracting body for URL {}", part_request.url))?;
+        let mut text = response.text().await.map_err(|e| anyhow::anyhow!(e))?;
+
+        let formatted = Self::pretty_format(&text);
 
         if !part_request.ignore_lines.is_empty() {
-            text = Self::filter(text, &part_request.ignore_lines);
+            text = Self::filter(formatted, &part_request.ignore_lines);
         }
 
         Ok(PartResponse::new(part_request.url, status_code, text))
     }
 
-    fn pretty_format(text: &str) -> Result<String> {
+    fn pretty_format(text: &str) -> String {
         serde_json::from_str::<Value>(text)
             .and_then(|value| serde_json::to_string_pretty(&value))
-            .context("Invalid body format, expecting JSON format")
+            .unwrap_or(text.into())
     }
 
     fn filter(text: String, ignore_list: &[String]) -> String {
