@@ -1,10 +1,12 @@
+use reqwest::header::HeaderValue;
 use std::{collections::HashMap, fs::OpenOptions, io::Write, path::PathBuf};
 
 use super::{
     request::{PartRequestConfig, RequestsConfig},
     response::{PartResponse, Response},
 };
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow};
+use reqwest::header::CONTENT_TYPE;
 use serde_json::Value;
 
 pub trait RequestClient {
@@ -27,9 +29,25 @@ pub trait RequestClient {
             .with_context(|| format!("Failed sending request to URL {}", part_request.url))?;
 
         let status_code = response.status();
+
+        let content_type = response
+            .headers()
+            .get(CONTENT_TYPE)
+            .cloned()
+            .ok_or_else(|| anyhow!("CONTENT_TYPE header not found"))?;
+
+        let content_type = content_type.to_str().map_err(|e| anyhow::anyhow!(e))?;
+
         let mut text = response.text().await.map_err(|e| anyhow::anyhow!(e))?;
 
-        let formatted = Self::pretty_format(&text);
+        let mut formatted: String = String::new();
+
+        if content_type.starts_with("application/json") {
+            formatted = Self::json_pretty_format(&text).with_context(|| "Failed to format JSON")?;
+        } else if content_type.starts_with("application/html") {
+            // TODO: Format HTML
+            formatted = text.clone();
+        };
 
         if !part_request.ignore_lines.is_empty() {
             text = Self::filter(formatted, &part_request.ignore_lines);
@@ -38,10 +56,10 @@ pub trait RequestClient {
         Ok(PartResponse::new(part_request.url, status_code, text))
     }
 
-    fn pretty_format(text: &str) -> String {
+    fn json_pretty_format(text: &str) -> Result<String> {
         serde_json::from_str::<Value>(text)
             .and_then(|value| serde_json::to_string_pretty(&value))
-            .unwrap_or(text.into())
+            .context("Invalid body format, expecting JSON format")
     }
 
     fn filter(text: String, ignore_list: &[String]) -> String {
