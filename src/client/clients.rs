@@ -5,7 +5,7 @@ use super::{
     response::{PartResponse, Response},
 };
 use anyhow::{Context, Result, anyhow};
-use reqwest::header::CONTENT_TYPE;
+use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue};
 use serde_json::Value;
 
 pub trait RequestClient {
@@ -13,16 +13,34 @@ pub trait RequestClient {
     fn get_client(&self) -> &reqwest::Client;
 
     async fn get_from_url(&self, part_request: PartRequestConfig) -> Result<PartResponse> {
-        let mut request = self.get_client().get(&part_request.url);
-        if let Some(user) = &part_request.user {
-            request = request.basic_auth(user, part_request.password.as_ref());
+        let mut request = match part_request.method.as_str() {
+            "POST" => self.get_client().post(&part_request.url),
+            _ => self.get_client().get(&part_request.url), // GET request handled here as default
+        };
+
+        if let Some(auth) = part_request.auth {
+            if let Some(basic_auth) = auth.basic_auth {
+                request = request.basic_auth(basic_auth.username, basic_auth.password);
+            }
+            if let Some(token) = &auth.token {
+                request = request.bearer_auth(token);
+            }
         }
 
-        if let Some(token) = &part_request.token {
-            request = request.bearer_auth(token);
+        let headers = HeaderMap::from_iter(part_request.headers.iter().map(|(k, v)| {
+            (
+                HeaderName::from_bytes(k.as_bytes()).expect("Header contains not UTF8 charachters"),
+                HeaderValue::from_str(v).expect("Header value is not valid"),
+            )
+        }));
+
+        if let Some(ref body) = part_request.body {
+            request = request.body(body.clone().as_str().context("Body content is invalid")?); // TODO: Fix this
         }
 
         let response = request
+            .headers(headers)
+            .query(&part_request.query)
             .send()
             .await
             .with_context(|| format!("Failed sending request to URL {}", part_request.url))?;

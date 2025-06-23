@@ -14,27 +14,29 @@ use crate::client::Config;
     long_about = "Takes multiple web links and compare their results between eachother"
 )]
 pub struct Args {
-    /// Path of the json file format to load for urls configurations. The configuration should be map of a list of requests, each request has name, and an object of left and righta list of objects each having left, and right.
-    /// each object will be formatted in this format
+    /// Path of the JSON file format to load for URLs configurations. The configuration consists of a map with a list of requests.
+    /// Each request has a mandatory `name` and an object specifying the HTTP request parameters.
     ///
-    ///+ {n}
-    ///+  "ignore_lines": [], An array of strings to be ignored if the line contains them, this ignore lines config is global for all requests{n}
-    ///+  "requests": [{n}
-    ///+    {{n}
-    ///+      "name":"", Mandatory name field, a string holding the name of the comparison{n}
-    ///+      "left": {{n}
-    ///+         "url": "https://example.com", Mandatory URL field {n}
-    ///+         "ignore_lines":[] Optional local ignore_lines{n}
-    ///+         "cached": boolean Optional to cache the response and reuse it instead of sending a request again{n}
-    ///+         "user": Optional string value if the call requires authentication{n}
-    ///+         "password": Optional string value if the call requires authentication{n}
-    ///+         "token": Optional token value, if the call requires a token bearer authentication{n}
-    ///+      },{n}
-    ///+      "right": {}, With the same fields and options as "left"{n}
-    ///+    }]{n}
-    ///+ }{n}
-    ///  Environmental variables can be used, either by providing them on the command level or by including them in a `.env` file. to use them inside the json wrap them in a ${}
-    ///  Example: if we have an environmental variable `HOST=https://google.com` and we use `"url": "${HOST}/query` when the program runs it will resolve to `"url": "https://google.com/query`
+    /// Each request object has this format:
+    ///
+    /// + {n}
+    /// +  "name": "",                      Mandatory name field, a string identifying the comparison
+    /// +  "method": "",                    HTTP method (GET, POST, etc.)
+    /// +  "url": "",                       Mandatory URL field
+    /// +  "headers": {},                   Optional map of header keys and values
+    /// +  "auth": {                        Optional map of authorization keys and values
+    /// +    "username": "",                username and (optional) password would be encoded using the basic authorization encoding.
+    /// +    "password": "",
+    /// +    "token": "",                   token will be passed as Bearer Token
+    /// +   },                              
+    /// +  "query": {},                     Optional map of query parameters
+    /// +  "body": {},                      Optional JSON body for POST, PUT, etc.
+    /// +  "timeout": 10,                   Optional timeout in seconds
+    /// +  "cached": false,                 Optional boolean to cache the response and reuse it instead of sending the request again
+    ///
+    /// Environmental variables can be used by wrapping them in `${}` within any string value inside the JSON config.
+    /// Example: if you have an environment variable `HOST=https://google.com`
+    /// and you use `"url": "${HOST}/query"`, when the program runs it will resolve to `"url": "https://google.com/query"`.
     pub path: PathBuf,
 
     /// Clear old cache for this json config
