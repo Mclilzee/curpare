@@ -114,10 +114,10 @@ impl CachedClient {
     }
 
     pub async fn get(&self, request: PartRequestConfig) -> Result<PartResponse> {
-        if request.cached
-            && let Some(response) = self.cache.get(&request.url)
-        {
-            return Ok(response.clone());
+        if request.cached {
+            if let Some(response) = self.cache.get(&request.url) {
+                return Ok(response.clone());
+            }
         }
 
         self.get_from_url(request).await
