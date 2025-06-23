@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::fmt::Display;
 
 #[derive(Deserialize)]
@@ -32,12 +33,38 @@ impl Display for RequestsConfig {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PartRequestConfig {
+    pub method: String,
     pub url: String,
+    pub cached: bool,
+
+    #[serde(default)]
+    pub auth: Option<RequestAuth>,
+
     #[serde(default)]
     pub ignore_lines: Vec<String>,
+
     #[serde(default)]
-    pub cached: bool,
-    pub user: Option<String>,
-    pub password: Option<String>,
+    pub headers: HashMap<String, String>,
+
+    #[serde(default)]
+    pub query: HashMap<String, String>,
+
+    #[serde(default)]
+    pub body: Option<serde_json::Value>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RequestAuth {
+    pub basic_auth: Option<BasicAuth>,
+
+    #[serde(default)]
     pub token: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct BasicAuth {
+    pub username: String,
+    pub password: Option<String>,
 }
