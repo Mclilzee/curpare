@@ -4,7 +4,8 @@ use super::{
     request::{PartRequestConfig, RequestsConfig},
     response::{PartResponse, Response},
 };
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow};
+use reqwest::header::CONTENT_TYPE;
 use serde_json::Value;
 
 pub trait RequestClient {
@@ -27,21 +28,34 @@ pub trait RequestClient {
             .with_context(|| format!("Failed sending request to URL {}", part_request.url))?;
 
         let status_code = response.status();
-        let mut text = response
-            .text()
-            .await
-            .map_err(|e| anyhow::anyhow!(e))
-            .and_then(|s| Self::pretty_format(&s))
-            .with_context(|| format!("Failed extracting body for URL {}", part_request.url))?;
+
+        let content_type = response
+            .headers()
+            .get(CONTENT_TYPE)
+            .cloned()
+            .ok_or_else(|| anyhow!("CONTENT_TYPE header not found"))?;
+
+        let content_type = content_type.to_str().map_err(|e| anyhow::anyhow!(e))?;
+
+        let mut text = response.text().await.map_err(|e| anyhow::anyhow!(e))?;
+
+        let formatted = match content_type {
+            ct if ct.starts_with("application/json") => {
+                Self::json_pretty_format(&text).with_context(|| "Failed to format JSON")?
+            }
+            ct => {
+                return Err(anyhow!("Could not format response: content_type: {ct}"));
+            }
+        };
 
         if !part_request.ignore_lines.is_empty() {
-            text = Self::filter(text, &part_request.ignore_lines);
+            text = Self::filter(formatted, &part_request.ignore_lines);
         }
 
         Ok(PartResponse::new(part_request.url, status_code, text))
     }
 
-    fn pretty_format(text: &str) -> Result<String> {
+    fn json_pretty_format(text: &str) -> Result<String> {
         serde_json::from_str::<Value>(text)
             .and_then(|value| serde_json::to_string_pretty(&value))
             .context("Invalid body format, expecting JSON format")
