@@ -1,4 +1,3 @@
-use reqwest::header::HeaderValue;
 use std::{collections::HashMap, fs::OpenOptions, io::Write, path::PathBuf};
 
 use super::{
