@@ -39,13 +39,11 @@ pub trait RequestClient {
 
         let mut text = response.text().await.map_err(|e| anyhow::anyhow!(e))?;
 
-        let mut formatted: String = String::new();
-
-        if content_type.starts_with("application/json") {
-            formatted = Self::json_pretty_format(&text).with_context(|| "Failed to format JSON")?;
-        } else if content_type.starts_with("application/html") {
-            // TODO: Format HTML
-            formatted = text.clone();
+        let formatted = match content_type {
+            ct if ct.starts_with("application/json") => {
+                Self::json_pretty_format(&text).with_context(|| "Failed to format JSON")?
+            }
+            _ => text.clone(),
         };
 
         if !part_request.ignore_lines.is_empty() {
