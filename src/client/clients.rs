@@ -43,7 +43,9 @@ pub trait RequestClient {
             ct if ct.starts_with("application/json") => {
                 Self::json_pretty_format(&text).with_context(|| "Failed to format JSON")?
             }
-            _ => text.clone(),
+            ct => {
+                return Err(anyhow!("Could not format response: content_type: {ct}"));
+            }
         };
 
         if !part_request.ignore_lines.is_empty() {
