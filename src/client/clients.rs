@@ -35,7 +35,7 @@ pub trait RequestClient {
         }));
 
         if let Some(ref body) = part_request.body {
-            request = request.body(body.clone().as_str().context("Body content is invalid")?); // TODO: Fix this
+            request = request.body(body.clone().to_string());
         }
 
         let response = request
