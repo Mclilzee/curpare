@@ -37,33 +37,42 @@ The JSON configuration should be structured as follows:
 
 ```json
 {
-  "ignore_lines": [],
   "requests": [
     {
       "name": "Example comparison",
+      "ignore_lines": [],
       "left": {
         "method": "GET",
-        "url": "https://api.example.com/data",
+        "url": "http://localhost:5000/data",
+        "cached": false,
         "headers": {
-          "Authorization": "Bearer <token>",
           "Accept": "application/json"
+        },
+        "auth": {
+          "basic_auth": {
+            "username": "example",
+            "password": "example1234"
+          }
         },
         "query": {
           "limit": "10",
           "sort": "desc"
-        },
+        }
       },
       "right": {
         "method": "GET",
-        "url": "https://api.example.com/v2/data",
+        "ignore_lines": [],
+        "url": "http://localhost:5000/data",
+        "cached": false,
         "headers": {
-          "Authorization": "Bearer <token>",
           "Accept": "application/json"
         },
-        "query": {
-          "limit": "10",
-          "sort": "desc"
+        "auth": {
+          "token": "jhdsn3qe2w784yn0n3"
         },
+        "query": {
+          "sort": "desc"
+        }
       }
     }
   ]
