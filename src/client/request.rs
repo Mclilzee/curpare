@@ -38,7 +38,7 @@ pub struct PartRequestConfig {
     pub cached: bool,
 
     #[serde(default)]
-    pub auth: Option<RequestAuth>,
+    pub basic_auth: Option<BasicAuth>,
 
     #[serde(default)]
     pub ignore_lines: Vec<String>,
@@ -48,18 +48,6 @@ pub struct PartRequestConfig {
 
     #[serde(default)]
     pub query: HashMap<String, String>,
-
-    #[serde(default)]
-    pub body: Option<serde_json::Value>,
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct RequestAuth {
-    pub basic_auth: Option<BasicAuth>,
-
-    #[serde(default)]
-    pub token: Option<String>,
 }
 
 #[derive(Deserialize)]

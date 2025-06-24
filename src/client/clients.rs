@@ -18,13 +18,8 @@ pub trait RequestClient {
             _ => self.get_client().get(&part_request.url), // GET request handled here as default
         };
 
-        if let Some(auth) = part_request.auth {
-            if let Some(basic_auth) = auth.basic_auth {
-                request = request.basic_auth(basic_auth.username, basic_auth.password);
-            }
-            if let Some(token) = &auth.token {
-                request = request.bearer_auth(token);
-            }
+        if let Some(basic_auth) = part_request.basic_auth {
+            request = request.basic_auth(basic_auth.username, basic_auth.password);
         }
 
         let headers = HeaderMap::from_iter(part_request.headers.iter().map(|(k, v)| {
@@ -33,10 +28,6 @@ pub trait RequestClient {
                 HeaderValue::from_str(v).expect("Header value is not valid"),
             )
         }));
-
-        if let Some(ref body) = part_request.body {
-            request = request.body(body.clone().to_string());
-        }
 
         let response = request
             .headers(headers)
