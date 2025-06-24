@@ -3,6 +3,7 @@ use anyhow::{Context, Error};
 use clap::Parser;
 use dotenv::dotenv;
 use std::{collections::HashMap, path::PathBuf};
+use toml;
 
 use crate::client::Config;
 
@@ -14,40 +15,20 @@ use crate::client::Config;
     long_about = "Takes multiple web links and compare their results between eachother"
 )]
 pub struct Args {
-    /// Path of the JSON file format to load for URLs configurations. The configuration consists of a map with a list of requests.
-    /// Each request has a mandatory `name` and an object specifying the HTTP request parameters.
-    ///
-    /// Each request object has this format:
-    ///
-    /// + {n}
-    /// +  "name": "",                      Mandatory name field, a string identifying the comparison
-    /// +  "method": "",                    HTTP method (GET, POST, etc.)
-    /// +  "url": "",                       Mandatory URL field
-    /// +  "headers": {},                   Optional map of header keys and values
-    /// +  "auth": {                        Optional map of authorization keys and values
-    /// +    "username": "",                username and (optional) password would be encoded using the basic authorization encoding.
-    /// +    "password": "",
-    /// +    "token": "",                   token will be passed as Bearer Token
-    /// +   },                              
-    /// +  "query": {},                     Optional map of query parameters
-    /// +  "body": {},                      Optional JSON body for POST, PUT, etc.
-    /// +  "timeout": 10,                   Optional timeout in seconds
-    /// +  "cached": false,                 Optional boolean to cache the response and reuse it instead of sending the request again
-    ///
-    /// Environmental variables can be used by wrapping them in `${}` within any string value inside the JSON config.
+    /// Environmental variables can be used by wrapping them in `${}` within any string value inside the TOML config.
     /// Example: if you have an environment variable `HOST=https://google.com`
     /// and you use `"url": "${HOST}/query"`, when the program runs it will resolve to `"url": "https://google.com/query"`.
     pub path: PathBuf,
 
-    /// Clear old cache for this json config
+    /// Clear old cache for this toml config
     #[arg(short = 'c', long = "clear-cache")]
     pub clear_cache: bool,
 
-    /// Cache all the calls for this json config
+    /// Cache all the calls for this toml config
     #[arg(short = 'a', long = "all-cache")]
     pub all_cache: bool,
 
-    /// Don't use cache for any calls for this json config
+    /// Don't use cache for any calls for this toml config
     #[arg(short = 'n', long = "no-cache")]
     pub no_cache: bool,
 
@@ -62,13 +43,14 @@ impl TryFrom<&Args> for Config {
     fn try_from(args: &Args) -> Result<Self, Self::Error> {
         dotenv().ok();
         let envs: HashMap<String, String> = std::env::vars().collect();
-        let json = std::fs::read_to_string(&args.path)
-            .map(|json| process_env_variables(&json, &envs))
+
+        let toml = std::fs::read_to_string(&args.path)
+            .map(|toml| process_env_variables(&toml, &envs))
             .map_err(|e| Error::msg(format!("Failed to read {}: {}", args.path.display(), e)))?;
 
-        let mut config: Config = serde_json::from_str(&json).with_context(|| {
+        let mut config: Config = toml::from_str(&toml).with_context(|| {
             format!(
-                "Json in path {} is not formatted correctly",
+                "Toml in path {} is not formatted correctly",
                 args.path.display()
             )
         })?;
