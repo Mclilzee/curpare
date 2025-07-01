@@ -5,7 +5,10 @@ use super::{
     response::{PartResponse, Response},
 };
 use anyhow::{Context, Result, anyhow};
-use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue};
+use reqwest::{
+    Method,
+    header::{CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue},
+};
 use serde_json::Value;
 
 pub trait RequestClient {
@@ -13,10 +16,19 @@ pub trait RequestClient {
     fn get_client(&self) -> &reqwest::Client;
 
     async fn get_from_url(&self, part_request: PartRequestConfig) -> Result<PartResponse> {
-        let mut request = match part_request.method.as_str() {
-            "POST" => self.get_client().post(&part_request.url),
-            _ => self.get_client().get(&part_request.url), // GET request handled here as default
-        };
+        let method = part_request
+            .method
+            .as_deref()
+            .unwrap_or("GET")
+            .parse::<Method>()
+            .map_err(|_| {
+                anyhow!(
+                    "Unrecognized method {}",
+                    part_request.method.unwrap_or_default()
+                )
+            })?;
+
+        let mut request = self.get_client().request(method, &part_request.url);
 
         if let Some(basic_auth) = part_request.basic_auth {
             request = request.basic_auth(basic_auth.username, basic_auth.password);
