@@ -36,7 +36,8 @@ pub trait RequestClient {
 
         let headers = HeaderMap::from_iter(part_request.headers.iter().map(|(k, v)| {
             (
-                HeaderName::from_bytes(k.as_bytes()).expect("Header contains not UTF8 charachters"),
+                HeaderName::from_bytes(k.as_bytes())
+                    .expect("Header contains invalid UTF-8 characters"),
                 HeaderValue::from_str(v).expect("Header value is not valid"),
             )
         }));
