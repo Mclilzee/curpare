@@ -33,7 +33,7 @@ impl Display for RequestsConfig {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PartRequestConfig {
-    pub method: String,
+    pub method: Option<String>,
     pub url: String,
     pub cached: bool,
 
