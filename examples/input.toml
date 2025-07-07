@@ -1,0 +1,34 @@
+ignore_lines = []
+
+[[requests]]
+name = "Example comparison 1"
+ignore_lines = []
+
+[requests.left]
+url = "http://localhost:5000/data"
+cached = false
+method = "GET"
+
+[requests.left.headers]
+Accept = "application/json"
+
+[requests.left.basic_auth]
+username = "example"
+password = "example1234"
+
+[requests.left.query]
+limit = "10"
+sort = "desc"
+
+[requests.right]
+url = "http://localhost:5000/data"
+ignore_lines = []
+cached = false
+method = "GET"
+
+[requests.right.headers]
+Accept = "application/json"
+Bearer = "jhdsn3qe2w784yn0n3"
+
+[requests.right.query]
+sort = "desc"

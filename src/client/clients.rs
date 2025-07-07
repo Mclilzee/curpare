@@ -5,7 +5,10 @@ use super::{
     response::{PartResponse, Response},
 };
 use anyhow::{Context, Result, anyhow};
-use reqwest::header::CONTENT_TYPE;
+use reqwest::{
+    Method,
+    header::{CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue},
+};
 use serde_json::Value;
 
 pub trait RequestClient {
@@ -13,16 +16,35 @@ pub trait RequestClient {
     fn get_client(&self) -> &reqwest::Client;
 
     async fn get_from_url(&self, part_request: PartRequestConfig) -> Result<PartResponse> {
-        let mut request = self.get_client().get(&part_request.url);
-        if let Some(user) = &part_request.user {
-            request = request.basic_auth(user, part_request.password.as_ref());
+        let method = part_request
+            .method
+            .as_deref()
+            .unwrap_or("GET")
+            .parse::<Method>()
+            .map_err(|_| {
+                anyhow!(
+                    "Unrecognized method {}",
+                    part_request.method.unwrap_or_default()
+                )
+            })?;
+
+        let mut request = self.get_client().request(method, &part_request.url);
+
+        if let Some(basic_auth) = part_request.basic_auth {
+            request = request.basic_auth(basic_auth.username, basic_auth.password);
         }
 
-        if let Some(token) = &part_request.token {
-            request = request.bearer_auth(token);
-        }
+        let headers = HeaderMap::from_iter(part_request.headers.iter().map(|(k, v)| {
+            (
+                HeaderName::from_bytes(k.as_bytes())
+                    .expect("Header contains invalid UTF-8 characters"),
+                HeaderValue::from_str(v).expect("Header value is not valid"),
+            )
+        }));
 
         let response = request
+            .headers(headers)
+            .query(&part_request.query)
             .send()
             .await
             .with_context(|| format!("Failed sending request to URL {}", part_request.url))?;
