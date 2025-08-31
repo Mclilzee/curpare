@@ -76,7 +76,7 @@ sort = "desc"
 
 You can use environmental variables in your TOML configuration. To do this, wrap the variable in `${}`. For example, if you have an environmental variable `HOST=https://google.com`, you can use it in your TOML as follows:
 
-"url": "${HOST}/query"
+url: "${HOST}/query"
 
 ### Options
 
