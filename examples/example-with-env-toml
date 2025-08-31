@@ -5,7 +5,7 @@ name = "Example comparison 1"
 ignore_lines = []
 
 [requests.left]
-url = "https://pokeapi.co/api/v2/pokemon/ditto"
+url = "${HOST}/api/v2/pokemon/ditto"
 cached = true
 [requests.left.headers]
 Accept = "application/json"
@@ -14,7 +14,7 @@ limit = "10"
 sort = "desc"
 
 [requests.right]
-url = "https://pokeapi.co/api/v2/pokemon/charizard"
+url = "${HOST}/api/v2/pokemon/charizard"
 ignore_lines = []
 cached = false
 method = "GET"
