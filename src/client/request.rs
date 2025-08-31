@@ -10,6 +10,7 @@ pub struct RequestsConfig {
 }
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Config {
     #[serde(default)]
     pub ignore_lines: Vec<String>,
