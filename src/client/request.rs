@@ -35,6 +35,8 @@ impl Display for RequestsConfig {
 pub struct PartRequestConfig {
     pub method: Option<String>,
     pub url: String,
+
+    #[serde(default)]
     pub cached: bool,
 
     #[serde(default)]
