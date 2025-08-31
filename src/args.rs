@@ -3,7 +3,6 @@ use anyhow::{Context, Error};
 use clap::Parser;
 use dotenv::dotenv;
 use std::{collections::HashMap, path::PathBuf};
-use toml;
 
 use crate::client::Config;
 
@@ -95,7 +94,7 @@ fn process_env_variables(str: &str, envs: &HashMap<String, String>) -> String {
                         chars.by_ref().take_while(|&char| char != '}').collect();
                     let new_val: String = envs.get(&env_variable).unwrap_or_else(|| panic!(
                         "Env variable {env_variable}, is not found. Make sure to provide it or add it to `.env`"
-                    )).to_string();
+                    )).clone();
 
                     replacement.extend(new_val.chars());
                 } else {

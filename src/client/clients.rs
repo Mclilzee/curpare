@@ -34,13 +34,13 @@ pub trait RequestClient {
             request = request.basic_auth(basic_auth.username, basic_auth.password);
         }
 
-        let headers = HeaderMap::from_iter(part_request.headers.iter().map(|(k, v)| {
+        let headers = part_request.headers.iter().map(|(k, v)| {
             (
                 HeaderName::from_bytes(k.as_bytes())
                     .expect("Header contains invalid UTF-8 characters"),
                 HeaderValue::from_str(v).expect("Header value is not valid"),
             )
-        }));
+        }).collect::<HeaderMap>();
 
         let response = request
             .headers(headers)
@@ -134,10 +134,8 @@ impl CachedClient {
     }
 
     pub async fn get(&self, request: PartRequestConfig) -> Result<PartResponse> {
-        if request.cached {
-            if let Some(response) = self.cache.get(&request.url) {
-                return Ok(response.clone());
-            }
+        if request.cached && let Some(response) = self.cache.get(&request.url) {
+            return Ok(response.clone());
         }
 
         self.get_from_url(request).await

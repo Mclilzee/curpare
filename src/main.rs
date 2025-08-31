@@ -101,7 +101,7 @@ async fn get_responses(client: Client, config: Config) -> Vec<Response> {
         progress_bar.inc(1);
         match result {
             Ok(response) => {
-                progress_bar.set_message(response.name.to_string());
+                progress_bar.set_message(response.name.clone());
                 responses.push(response);
             }
             Err(e) => eprintln!("{e:?}"),
