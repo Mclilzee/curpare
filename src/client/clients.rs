@@ -5,7 +5,10 @@ use super::{
     response::{PartResponse, Response},
 };
 use anyhow::{Context, Result, anyhow};
-use reqwest::header::CONTENT_TYPE;
+use reqwest::{
+    Method,
+    header::{CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue},
+};
 use serde_json::Value;
 
 pub trait RequestClient {
@@ -13,16 +16,35 @@ pub trait RequestClient {
     fn get_client(&self) -> &reqwest::Client;
 
     async fn get_from_url(&self, part_request: PartRequestConfig) -> Result<PartResponse> {
-        let mut request = self.get_client().get(&part_request.url);
-        if let Some(user) = &part_request.user {
-            request = request.basic_auth(user, part_request.password.as_ref());
+        let method = part_request
+            .method
+            .as_deref()
+            .unwrap_or("GET")
+            .parse::<Method>()
+            .map_err(|_| {
+                anyhow!(
+                    "Unrecognized method {}",
+                    part_request.method.unwrap_or_default()
+                )
+            })?;
+
+        let mut request = self.get_client().request(method, &part_request.url);
+
+        if let Some(basic_auth) = part_request.basic_auth {
+            request = request.basic_auth(basic_auth.username, basic_auth.password);
         }
 
-        if let Some(token) = &part_request.token {
-            request = request.bearer_auth(token);
-        }
+        let headers = part_request.headers.iter().map(|(k, v)| {
+            (
+                HeaderName::from_bytes(k.as_bytes())
+                    .expect("Header contains invalid UTF-8 characters"),
+                HeaderValue::from_str(v).expect("Header value is not valid"),
+            )
+        }).collect::<HeaderMap>();
 
         let response = request
+            .headers(headers)
+            .query(&part_request.query)
             .send()
             .await
             .with_context(|| format!("Failed sending request to URL {}", part_request.url))?;
@@ -38,18 +60,16 @@ pub trait RequestClient {
         let content_type = content_type.to_str().map_err(|e| anyhow::anyhow!(e))?;
 
         let mut text = response.text().await.map_err(|e| anyhow::anyhow!(e))?;
-
-        let formatted = match content_type {
-            ct if ct.starts_with("application/json") => {
-                Self::json_pretty_format(&text).with_context(|| "Failed to format JSON")?
-            }
+        text = match content_type {
+            ct if ct.starts_with("application/json") => 
+                Self::json_pretty_format(&text).with_context(|| "Failed to format JSON")?,
             ct => {
                 return Err(anyhow!("Could not format response: content_type: {ct}"));
             }
         };
 
         if !part_request.ignore_lines.is_empty() {
-            text = Self::filter(formatted, &part_request.ignore_lines);
+            text = Self::filter(text, &part_request.ignore_lines);
         }
 
         Ok(PartResponse::new(part_request.url, status_code, text))
@@ -114,10 +134,8 @@ impl CachedClient {
     }
 
     pub async fn get(&self, request: PartRequestConfig) -> Result<PartResponse> {
-        if request.cached {
-            if let Some(response) = self.cache.get(&request.url) {
-                return Ok(response.clone());
-            }
+        if request.cached && let Some(response) = self.cache.get(&request.url) {
+            return Ok(response.clone());
         }
 
         self.get_from_url(request).await
