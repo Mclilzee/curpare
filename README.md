@@ -2,6 +2,10 @@
 
 Curpare is a powerful tool designed to compare the return values, status codes, and bodies of JSON APIs seamlessly. It leverages [git-delta](https://github.com/dandavison/delta) to present the output in a clear and user-friendly manner. With Curpare, you can define multiple API endpoints to compare, utilize environment variables, and specify various options for each comparison.
 
+# Example using Pokemon API
+
+![Comparison using Delta for pokemon api](./asset/example-1.png)
+
 ## Features
 
 - **Flexible TOML Configuration**: Define as many API links as you wish in a TOML format. Each comparison can be customized with specific options.
