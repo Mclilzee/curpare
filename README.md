@@ -9,7 +9,7 @@ Curpare is a powerful tool designed to compare the return values, status codes, 
 ## Features
 
 - **Flexible TOML Configuration**: Define as many API links as you wish in a TOML format. Each comparison can be customized with specific options.
-- **Caching System**: Compare the same API by caching one call and running it again against a live version. This allows for efficient comparisons without unnecessary API calls.
+- **Caching System**: Cache the API calls by caching them to avoid unnecessary API calls. You can utilize the cache system to compare the same API by caching a call and checking it against a live version of the same API. This will make sure you can focus on making progress while having a backup test of the old API calls to see the changes on seconds.
 - **Multiple Cache Versions**: Each cached response is stored in its own JSON file within the cache directory, enabling you to maintain multiple versions of the same API for comparison.
 - **Ignore Lines**: Specify lines to ignore during comparisons, making it easier to focus on relevant differences.
 - **Environment Variables**: Use environment variables in your TOML configuration for dynamic URL resolution.
