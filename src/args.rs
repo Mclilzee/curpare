@@ -14,9 +14,24 @@ use crate::client::Config;
     long_about = "Takes multiple web links and compare their results between eachother"
 )]
 pub struct Args {
+    /// Path of the toml file format to load for urls configurations. The configuration should be list of requests, each request has name, and a left and right list of options. Here is a snippet, check README.md for full list of options.
+    /// {n}
+    /// [[requests]]{n}
+    /// name = "Example name"{n}
+    /// ignore_lines = []{n}
+
+    /// [requests.left]{n}
+    /// url = "http://localhost:5000/data"{n}
+    /// cached = true // Default is false, can be ommited{n}
+    /// method = "GET" // Default is GET, can be ommited{n}
+
+    /// [requests.right]{n}
+    /// url = "http://localhost:5000/data"{n}
+    /// ignore_lines = []{n}
+    /// {n}
+    /// Environmental variables can be used, either by providing them on the command level or by including them in a `.env` file. to use them inside the json wrap them in a ${}
+    ///  Example: if we have an environmental variable `HOST=https://google.com` and we use `"url": "${HOST}/query` when the program runs it will resolve to `"url": "https://google.com/query`
     /// Environmental variables can be used by wrapping them in `${}` within any string value inside the TOML config.
-    /// Example: if you have an environment variable `HOST=https://google.com`
-    /// and you use `"url": "${HOST}/query"`, when the program runs it will resolve to `"url": "https://google.com/query"`.
     pub path: PathBuf,
 
     /// Clear old cache for this toml config
