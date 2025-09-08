@@ -1,0 +1,8 @@
+[[requests]]
+name = "Example comparison 1"
+
+[requests.left]
+url = "https://pokeapi.co/api/v2/pokemon/ditto"
+
+[requests.right]
+url = "https://pokeapi.co/api/v2/pokemon/charizard"

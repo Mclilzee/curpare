@@ -37,7 +37,18 @@ curpare [OPTIONS] <PATH>
 
 ### TOML Configuration Format
 
-The TOML configuration should be structured as follows:
+The TOML configuration example with only mandatory fields:
+```toml
+[[requests]]
+name = "Example comparison 1"
+
+[requests.left]
+url = "http://localhost:5000/data"
+[requests.right]
+url = "http://localhost:5600/data"
+```
+
+More Fields example
 
 ```toml
 ignore_lines = []
