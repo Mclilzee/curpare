@@ -1,34 +1,13 @@
-ignore_lines = []
-
 [[requests]]
 name = "Example comparison 1"
-ignore_lines = []
-
 [requests.left]
-url = "http://localhost:5000/data"
-cached = false
-method = "GET"
-
-[requests.left.headers]
-Accept = "application/json"
-
-[requests.left.basic_auth]
-username = "example"
-password = "example1234"
-
-[requests.left.query]
-limit = "10"
-sort = "desc"
-
+url = "https://pokeapi.co/api/v2/pokemon/ditto"
 [requests.right]
-url = "http://localhost:5000/data"
-ignore_lines = []
-cached = false
-method = "GET"
+url = "https://pokeapi.co/api/v2/pokemon/charizard"
 
-[requests.right.headers]
-Accept = "application/json"
-Bearer = "jhdsn3qe2w784yn0n3"
-
-[requests.right.query]
-sort = "desc"
+[[requests]]
+name = "Example comparison 2"
+[requests.left]
+url = "https://pokeapi.co/api/v2/pokemon/squirtle"
+[requests.right]
+url = "https://pokeapi.co/api/v2/pokemon/ivysaur"

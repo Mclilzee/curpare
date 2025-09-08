@@ -37,15 +37,21 @@ curpare [OPTIONS] <PATH>
 
 ### TOML Configuration Format
 
-The TOML configuration example with only mandatory fields:
+The TOML configuration example with only mandatory fields making two requests comparison:
 ```toml
 [[requests]]
 name = "Example comparison 1"
-
 [requests.left]
-url = "http://localhost:5000/data"
+url = "https://pokeapi.co/api/v2/pokemon/ditto"
 [requests.right]
-url = "http://localhost:5600/data"
+url = "https://pokeapi.co/api/v2/pokemon/charizard"
+
+[[requests]]
+name = "Example comparison 2"
+[requests.left]
+url = "https://pokeapi.co/api/v2/pokemon/squirtle"
+[requests.right]
+url = "https://pokeapi.co/api/v2/pokemon/ivysaur"
 ```
 
 More Fields example
