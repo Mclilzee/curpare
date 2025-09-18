@@ -62,7 +62,7 @@ pub trait RequestClient {
         let mut text = response.text().await.map_err(|e| anyhow::anyhow!(e))?;
         text = match content_type {
             ct if ct.starts_with("application/json") => 
-                Self::json_pretty_format(&text).with_context(|| "Failed to format JSON")?,
+                Self::json_pretty_format(&text).with_context(|| format!("Failed to format JSON for request {}", part_request.url))?,
             ct => {
                 return Err(anyhow!("Could not format response: content_type: {ct}"));
             }
