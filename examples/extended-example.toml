@@ -28,7 +28,7 @@ method = "GET"
 
 [requests.right.headers]
 Accept = "application/json"
-Bearer = "jhdsn3qe2w784yn0n3"
+Authorization = "Bearer jhdsn3qe2w784yn0n3"
 
 [requests.right.query]
 sort = "desc"

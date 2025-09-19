@@ -34,13 +34,17 @@ pub trait RequestClient {
             request = request.basic_auth(basic_auth.username, basic_auth.password);
         }
 
-        let headers = part_request.headers.iter().map(|(k, v)| {
-            (
-                HeaderName::from_bytes(k.as_bytes())
-                    .expect("Header contains invalid UTF-8 characters"),
-                HeaderValue::from_str(v).expect("Header value is not valid"),
-            )
-        }).collect::<HeaderMap>();
+        let headers = part_request
+            .headers
+            .iter()
+            .map(|(k, v)| {
+                (
+                    HeaderName::from_bytes(k.as_bytes())
+                        .expect("Header contains invalid UTF-8 characters"),
+                    HeaderValue::from_str(v).expect("Header value is not valid"),
+                )
+            })
+            .collect::<HeaderMap>();
 
         let response = request
             .headers(headers)
@@ -61,10 +65,13 @@ pub trait RequestClient {
 
         let mut text = response.text().await.map_err(|e| anyhow::anyhow!(e))?;
         text = match content_type {
-            ct if ct.starts_with("application/json") => 
-                Self::json_pretty_format(&text).with_context(|| "Failed to format JSON")?,
+            ct if ct.starts_with("application/json") => Self::json_pretty_format(&text)
+                .with_context(|| format!("Failed to format JSON for URL: {}", part_request.url))?,
             ct => {
-                return Err(anyhow!("Could not format response: content_type: {ct}"));
+                return Err(anyhow!(
+                    "Could not format response of content_type: {ct}\nURL: {}",
+                    part_request.url
+                ));
             }
         };
 
@@ -134,7 +141,9 @@ impl CachedClient {
     }
 
     pub async fn get(&self, request: PartRequestConfig) -> Result<PartResponse> {
-        if request.cached && let Some(response) = self.cache.get(&request.url) {
+        if request.cached
+            && let Some(response) = self.cache.get(&request.url)
+        {
             return Ok(response.clone());
         }
 
