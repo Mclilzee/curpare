@@ -81,29 +81,35 @@ async fn get_responses(client: Client, config: Config) -> Vec<Response> {
     let mut handles = vec![];
     let client = Arc::new(Mutex::new(client));
     let progress_bar = ProgressBar::new(config.requests.len() as u64);
-    for request in config.requests {
-        let moved_client = client.clone();
-        let handle =
-            tokio::spawn(async move { moved_client.lock().await.get_response(request).await });
-
-        handles.push(handle);
-    }
-
     progress_bar.set_style(
         ProgressStyle::with_template(
             "[{elapsed_precise}] {wide_bar:.cyan/blue} {pos:>7}/{len:7} Sending request for: {msg} ",
         )
         .unwrap(),
     );
+
+    for request in config.requests {
+        let moved_client = client.clone();
+        let moved_progress_bar = progress_bar.clone();
+        let handle = tokio::spawn(async move {
+            let result = moved_client.lock().await.get_response(request).await;
+            if let Ok(response) = &result {
+                moved_progress_bar.set_message(response.name.clone());
+            }
+
+            moved_progress_bar.inc(1);
+            result
+        });
+
+        handles.push(handle);
+    }
+
     let mut responses = vec![];
     for handle in handles {
         let result = handle.await.expect("Failed to unlock ansync handle");
         progress_bar.inc(1);
         match result {
-            Ok(response) => {
-                progress_bar.set_message(response.name.clone());
-                responses.push(response);
-            }
+            Ok(response) => responses.push(response),
             Err(e) => eprintln!("{e:?}"),
         }
     }
