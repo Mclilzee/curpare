@@ -4,7 +4,7 @@ use clap::Parser;
 use dotenv::dotenv;
 use std::{collections::HashMap, path::PathBuf};
 
-use crate::client::Config;
+use crate::client::Requests;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -59,7 +59,7 @@ pub struct Args {
     pub out: Option<PathBuf>,
 }
 
-impl TryFrom<&Args> for Config {
+impl TryFrom<&Args> for Requests {
     type Error = Error;
 
     fn try_from(args: &Args) -> Result<Self, Self::Error> {
@@ -70,7 +70,7 @@ impl TryFrom<&Args> for Config {
             .map(|toml| process_env_variables(&toml, &envs))
             .map_err(|e| Error::msg(format!("Failed to read {}: {}", args.path.display(), e)))?;
 
-        let mut config: Config = toml::from_str(&toml).with_context(|| {
+        let mut config: Requests = toml::from_str(&toml).with_context(|| {
             format!(
                 "Toml in path {} is not formatted correctly",
                 args.path.display()

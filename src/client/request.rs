@@ -1,28 +1,36 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Display;
 
-#[derive(Clone, Deserialize)]
-pub struct RequestsConfig {
-    pub name: String,
-    pub left: PartRequestConfig,
-    pub right: PartRequestConfig,
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Config {
+#[derive(Deserialize, Serialize)]
+pub struct Requests {
     #[serde(default)]
     pub ignore_lines: Vec<String>,
     pub requests: Vec<RequestsConfig>,
 }
 
-impl Config {
+impl Requests {
     pub fn requires_cache(&self) -> bool {
         self.requests
             .iter()
             .any(|r| r.left.cached || r.right.cached)
     }
+}
+
+impl From<Vec<RequestsConfig>> for Requests {
+    fn from(requests: Vec<RequestsConfig>) -> Self {
+        Requests {
+            ignore_lines: vec![],
+            requests,
+        }
+    }
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+pub struct RequestsConfig {
+    pub name: String,
+    pub left: PartRequestConfig,
+    pub right: PartRequestConfig,
 }
 
 impl Display for RequestsConfig {
@@ -31,31 +39,35 @@ impl Display for RequestsConfig {
     }
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct PartRequestConfig {
-    pub method: Option<String>,
     pub url: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub method: Option<String>,
 
     #[serde(default)]
     pub cached: bool,
 
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub basic_auth: Option<BasicAuth>,
 
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub ignore_lines: Vec<String>,
 
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub headers: HashMap<String, String>,
 
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub query: HashMap<String, String>,
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct BasicAuth {
     pub username: String,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub password: Option<String>,
 }
