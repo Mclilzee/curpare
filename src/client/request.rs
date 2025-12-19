@@ -3,13 +3,13 @@ use std::collections::HashMap;
 use std::fmt::Display;
 
 #[derive(Deserialize, Serialize)]
-pub struct Requests {
+pub struct Config {
     #[serde(default)]
     pub ignore_lines: Vec<String>,
     pub requests: Vec<RequestsConfig>,
 }
 
-impl Requests {
+impl Config {
     pub fn requires_cache(&self) -> bool {
         self.requests
             .iter()
@@ -17,9 +17,9 @@ impl Requests {
     }
 }
 
-impl From<Vec<RequestsConfig>> for Requests {
+impl From<Vec<RequestsConfig>> for Config {
     fn from(requests: Vec<RequestsConfig>) -> Self {
-        Requests {
+        Config {
             ignore_lines: vec![],
             requests,
         }
