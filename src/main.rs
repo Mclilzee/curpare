@@ -61,25 +61,33 @@ async fn main() -> Result<()> {
 
 fn print_differences(responses: &[Response]) {
     let (terminal_width, _) = term_size::dimensions().unwrap_or((100, 100));
-    let text_to_print = responses
-        .iter()
-        .fold(String::new(), |mut output, response| {
-            let _ = write!(
-                output,
-                "{}: {} => {}\n{}",
-                response.name,
-                response.left.url,
-                response.right.url,
-                get_delta_result(&response.left.text, &response.right.text, terminal_width)
-            );
-            output
-        });
+    let nthreads = std::thread::available_parallelism()
+        .expect("Wasn't able to get threads counts for this machine.");
+    let chunk_size = responses.len() / nthreads;
+    let delta_diffs = responses
+        .chunks(chunk_size)
+        .map(|responses| {
+            responses
+                .iter()
+                .fold(String::new(), |mut output, response| {
+                    let _ = write!(
+                        output,
+                        "{}: {} => {}\n{}",
+                        response.name,
+                        response.left.url,
+                        response.right.url,
+                        get_delta_result(&response.left.text, &response.right.text, terminal_width)
+                    );
+                    output
+                })
+        })
+        .collect::<String>();
 
     PrettyPrinter::new()
-        .input_from_bytes(text_to_print.as_bytes())
+        .input_from_bytes(delta_diffs.as_bytes())
         .paging_mode(bat::PagingMode::QuitIfOneScreen)
         .print()
-        .unwrap();
+        .expect("Failed to show differences using bat");
 }
 
 async fn get_responses(client: Client, config: Config) -> Vec<Response> {
