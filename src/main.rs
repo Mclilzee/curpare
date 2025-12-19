@@ -59,27 +59,19 @@ async fn main() -> Result<()> {
 
 fn print_differences(responses: &[Response]) {
     let (terminal_width, _) = term_size::dimensions().unwrap_or((100, 100));
-    let nthreads = std::thread::available_parallelism()
-        .expect("Wasn't able to get threads counts for this machine.");
-    let chunk_size = (responses.len() / nthreads).max(nthreads.into());
     let delta_diffs = responses
-        .chunks(chunk_size)
-        .map(|responses| {
-            responses
-                .iter()
-                .fold(String::new(), |mut output, response| {
-                    let _ = write!(
-                        output,
-                        "{}: {} => {}\n{}",
-                        response.name,
-                        response.left.url,
-                        response.right.url,
-                        get_delta_result(&response.left.text, &response.right.text, terminal_width)
-                    );
-                    output
-                })
-        })
-        .collect::<String>();
+        .iter()
+        .fold(String::new(), |mut output, response| {
+            let _ = write!(
+                output,
+                "{}: {} => {}\n{}",
+                response.name,
+                response.left.url,
+                response.right.url,
+                get_delta_result(&response.left.text, &response.right.text, terminal_width)
+            );
+            output
+        });
 
     PrettyPrinter::new()
         .input_from_bytes(delta_diffs.as_bytes())
