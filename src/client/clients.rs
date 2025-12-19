@@ -114,8 +114,13 @@ impl CachelesClient {
 }
 impl RequestClient for CachelesClient {
     async fn get_response(&mut self, requests: RequestsConfig) -> Result<Response> {
-        let left_response = self.get_from_url(requests.left).await?;
-        let right_response = self.get_from_url(requests.right).await?;
+        let (left_response, right_response) = tokio::join!(
+            self.get_from_url(requests.left),
+            self.get_from_url(requests.right)
+        );
+
+        let left_response = left_response?;
+        let right_response = right_response?;
 
         Ok(Response::new(requests.name, left_response, right_response))
     }
@@ -155,17 +160,11 @@ impl RequestClient for CachedClient {
     async fn get_response(&mut self, requests: RequestsConfig) -> Result<Response> {
         let cache_left = requests.left.cached;
         let cache_right = requests.right.cached;
-        let left_response = self.get(requests.left).await?;
-        let right_response = self.get(requests.right).await?;
+        let (left_response, right_response) =
+            tokio::join!(self.get(requests.left), self.get(requests.right));
 
-        // TODO: call in parallel
-        // let left_handle = tokio::spawn(async move {
-        //     self.get(requests.left).await
-        // });
-        //
-        // let right_handle = tokio::spawn(async move {
-        //     self.get(requests.right).await
-        // });
+        let left_response = left_response?;
+        let right_response = right_response?;
 
         if cache_left {
             self.cache
