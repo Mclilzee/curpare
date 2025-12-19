@@ -2,7 +2,7 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::fmt::Display;
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 pub struct RequestsConfig {
     pub name: String,
     pub left: PartRequestConfig,
@@ -31,7 +31,7 @@ impl Display for RequestsConfig {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PartRequestConfig {
     pub method: Option<String>,
@@ -53,7 +53,7 @@ pub struct PartRequestConfig {
     pub query: HashMap<String, String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct BasicAuth {
     pub username: String,

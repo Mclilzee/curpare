@@ -158,6 +158,15 @@ impl RequestClient for CachedClient {
         let left_response = self.get(requests.left).await?;
         let right_response = self.get(requests.right).await?;
 
+        // TODO: call in parallel
+        // let left_handle = tokio::spawn(async move {
+        //     self.get(requests.left).await
+        // });
+        //
+        // let right_handle = tokio::spawn(async move {
+        //     self.get(requests.right).await
+        // });
+
         if cache_left {
             self.cache
                 .insert(left_response.url.clone(), left_response.clone());

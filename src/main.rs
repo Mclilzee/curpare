@@ -11,7 +11,7 @@ use std::{
     sync::Arc,
 };
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow};
 use args::Args;
 use bat::PrettyPrinter;
 use clap::Parser;
@@ -23,8 +23,8 @@ use tokio::sync::Mutex;
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
-    let configs: Config = (&args).try_into()?;
-    let requires_caching = configs.requires_cache();
+    let config: Config = (&args).try_into()?;
+    let requires_caching = config.requires_cache();
     let cache_location = get_cache_location(&args.path);
     if args.clear_cache {
         let cache_location = cache_location.as_ref().unwrap_or_else(|e| {
@@ -50,11 +50,15 @@ async fn main() -> Result<()> {
         Client::new()
     };
 
-    let responses = get_responses(client, configs).await;
+    if args.out.is_some() {
+        save_responses_with_differences(client, config).await;
+        return Ok(());
+    }
+
+    let responses = get_responses(client, config).await;
     if !args.cache_only {
         print_differences(&responses);
     }
-
     Ok(())
 }
 
@@ -127,45 +131,58 @@ async fn get_responses(client: Client, config: Config) -> Vec<Response> {
     responses
 }
 
-// fn save_responses_with_differences(client: Client, config: Config, path: PathBuf) {
-//     let mut handles = vec![];
-//     let client = Arc::new(Mutex::new(client));
-//     let progress_bar = ProgressBar::new(config.requests.len() as u64);
-//     progress_bar.set_style(
-//         ProgressStyle::with_template(
-//             "[{elapsed_precise}] {wide_bar:.cyan/blue} {pos:>7}/{len:7} Sending request for: {msg} ",
-//         )
-//         .unwrap(),
-//     );
-//
-//     for request in config.requests {
-//         let moved_client = client.clone();
-//         let moved_progress_bar = progress_bar.clone();
-//         let handle = tokio::spawn(async move {
-//             let result = moved_client.lock().await.get_response(request).await;
-//             if let Ok(response) = &result {
-//                 moved_progress_bar.set_message(response.name.clone());
-//             }
-//
-//             moved_progress_bar.inc(1);
-//             result
-//         });
-//
-//         handles.push(handle);
-//     }
-//
-//     let mut responses = vec![];
-//     for handle in handles {
-//         let result = handle.await.expect("Failed to unlock ansync handle");
-//         match result {
-//             Ok(response) => responses.push(response),
-//             Err(e) => eprintln!("{e:?}"),
-//         }
-//     }
-//
-//     progress_bar.finish();
-//     responses
-// }
+async fn save_responses_with_differences(client: Client, config: Config) {
+    let mut handles = vec![];
+    let client = Arc::new(Mutex::new(client));
+    let progress_bar = ProgressBar::new(config.requests.len() as u64);
+    progress_bar.set_style(
+        ProgressStyle::with_template(
+            "[{elapsed_precise}] {wide_bar:.cyan/blue} {pos:>7}/{len:7} Sending request for: {msg} ",
+        )
+        .unwrap(),
+    );
+
+    for request in config.requests {
+        let moved_client = client.clone();
+        let moved_progress_bar = progress_bar.clone();
+        let handle = tokio::spawn(async move {
+            let result = moved_client
+                .lock()
+                .await
+                .get_response(request.clone())
+                .await;
+            match &result {
+                Ok(response) => {
+                    moved_progress_bar.set_message(response.name.clone());
+                    moved_progress_bar.inc(1);
+                    if response.left.text == response.right.text {
+                        Ok(None)
+                    } else {
+                        Ok(Some(request))
+                    }
+                }
+                Err(e) => {
+                    moved_progress_bar.inc(1);
+                    Err(anyhow!("{e}"))
+                }
+            }
+        });
+
+        handles.push(handle);
+    }
+
+    let mut requests = vec![];
+    for handle in handles {
+        let result = handle.await.expect("Failed to unlock ansync handle");
+        match result {
+            Ok(Some(request)) => requests.push(request),
+            Ok(None) => {}
+            Err(e) => eprintln!("{e:?}"),
+        }
+    }
+
+    progress_bar.finish();
+}
 
 fn get_cache_location(path: &Path) -> Result<PathBuf> {
     Ok(Path::new("./cache").join(path.file_name().context("Failed to retreive file name")?))
