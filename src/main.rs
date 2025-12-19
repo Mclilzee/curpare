@@ -4,7 +4,7 @@ mod args;
 mod client;
 
 use std::{
-    fs::remove_file,
+    fs::{File, remove_file},
     io::Write,
     path::{Path, PathBuf},
     process::Command,
@@ -49,8 +49,8 @@ async fn main() -> Result<()> {
             .context("Failed to load cache")?;
     }
 
-    if args.out.is_some() {
-        save_responses_with_differences(client, config).await;
+    if let Some(path) = args.out {
+        save_responses_with_differences(client, config, path).await?;
         return Ok(());
     }
 
@@ -139,7 +139,11 @@ async fn get_responses(client: Client, config: Config) -> Vec<Response> {
     responses
 }
 
-async fn save_responses_with_differences(client: Client, config: Config) {
+async fn save_responses_with_differences(
+    client: Client,
+    config: Config,
+    path: PathBuf,
+) -> Result<()> {
     let mut handles = vec![];
     let client = Arc::new(Mutex::new(client));
     let progress_bar = ProgressBar::new(config.requests.len() as u64);
@@ -189,9 +193,12 @@ async fn save_responses_with_differences(client: Client, config: Config) {
         }
     }
 
-    println!("{}", toml::to_string(&Config::from(requests)).unwrap());
+    let config = toml::to_string(&Config::from(requests))?;
+    let mut file = File::create(path)?;
+    file.write(config.as_bytes())?;
 
     progress_bar.finish();
+    Ok(())
 }
 
 fn get_cache_location(path: &Path) -> Result<PathBuf> {
