@@ -52,9 +52,9 @@ async fn main() -> Result<()> {
     };
 
     let (terminal_width, _) = term_size::dimensions().unwrap_or((100, 100));
-    let text_to_print =
-        get_responses(client, configs)
-            .await
+    let responses = get_responses(client, configs).await;
+    if args.cache_only {
+        let text_to_print = responses
             .iter()
             .fold(String::new(), |mut output, response| {
                 let _ = write!(
@@ -68,11 +68,12 @@ async fn main() -> Result<()> {
                 output
             });
 
-    PrettyPrinter::new()
-        .input_from_bytes(text_to_print.as_bytes())
-        .paging_mode(bat::PagingMode::QuitIfOneScreen)
-        .print()
-        .unwrap();
+        PrettyPrinter::new()
+            .input_from_bytes(text_to_print.as_bytes())
+            .paging_mode(bat::PagingMode::QuitIfOneScreen)
+            .print()
+            .unwrap();
+    }
 
     Ok(())
 }
@@ -107,7 +108,6 @@ async fn get_responses(client: Client, config: Config) -> Vec<Response> {
     let mut responses = vec![];
     for handle in handles {
         let result = handle.await.expect("Failed to unlock ansync handle");
-        progress_bar.inc(1);
         match result {
             Ok(response) => responses.push(response),
             Err(e) => eprintln!("{e:?}"),

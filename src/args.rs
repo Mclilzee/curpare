@@ -49,6 +49,10 @@ pub struct Args {
     /// Skip all the ignore lines
     #[arg(short = 'i', long = "skip-ignore")]
     pub skip_ignore: bool,
+
+    /// Only cache calls and don't show differences
+    #[arg(long = "cache-only")]
+    pub cache_only: bool,
 }
 
 impl TryFrom<&Args> for Config {
