@@ -2,7 +2,15 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Display;
 
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize)]
+pub struct RequestsConfig {
+    pub name: String,
+    pub left: PartRequestConfig,
+    pub right: PartRequestConfig,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Config {
     #[serde(default)]
     pub ignore_lines: Vec<String>,
@@ -39,7 +47,7 @@ impl Display for RequestsConfig {
     }
 }
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PartRequestConfig {
     pub url: String,
@@ -63,7 +71,7 @@ pub struct PartRequestConfig {
     pub query: HashMap<String, String>,
 }
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct BasicAuth {
     pub username: String,
