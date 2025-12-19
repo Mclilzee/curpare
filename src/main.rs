@@ -51,31 +51,35 @@ async fn main() -> Result<()> {
         Client::new()
     };
 
-    let (terminal_width, _) = term_size::dimensions().unwrap_or((100, 100));
     let responses = get_responses(client, configs).await;
-    if args.cache_only {
-        let text_to_print = responses
-            .iter()
-            .fold(String::new(), |mut output, response| {
-                let _ = write!(
-                    output,
-                    "{}: {} => {}\n{}",
-                    response.name,
-                    response.left.url,
-                    response.right.url,
-                    get_delta_result(&response.left.text, &response.right.text, terminal_width)
-                );
-                output
-            });
-
-        PrettyPrinter::new()
-            .input_from_bytes(text_to_print.as_bytes())
-            .paging_mode(bat::PagingMode::QuitIfOneScreen)
-            .print()
-            .unwrap();
+    if !args.cache_only {
+        print_differences(&responses);
     }
 
     Ok(())
+}
+
+fn print_differences(responses: &[Response]) {
+    let (terminal_width, _) = term_size::dimensions().unwrap_or((100, 100));
+    let text_to_print = responses
+        .iter()
+        .fold(String::new(), |mut output, response| {
+            let _ = write!(
+                output,
+                "{}: {} => {}\n{}",
+                response.name,
+                response.left.url,
+                response.right.url,
+                get_delta_result(&response.left.text, &response.right.text, terminal_width)
+            );
+            output
+        });
+
+    PrettyPrinter::new()
+        .input_from_bytes(text_to_print.as_bytes())
+        .paging_mode(bat::PagingMode::QuitIfOneScreen)
+        .print()
+        .unwrap();
 }
 
 async fn get_responses(client: Client, config: Config) -> Vec<Response> {
@@ -117,6 +121,46 @@ async fn get_responses(client: Client, config: Config) -> Vec<Response> {
     progress_bar.finish();
     responses
 }
+
+// fn save_responses_with_differences(client: Client, config: Config, path: PathBuf) {
+//     let mut handles = vec![];
+//     let client = Arc::new(Mutex::new(client));
+//     let progress_bar = ProgressBar::new(config.requests.len() as u64);
+//     progress_bar.set_style(
+//         ProgressStyle::with_template(
+//             "[{elapsed_precise}] {wide_bar:.cyan/blue} {pos:>7}/{len:7} Sending request for: {msg} ",
+//         )
+//         .unwrap(),
+//     );
+//
+//     for request in config.requests {
+//         let moved_client = client.clone();
+//         let moved_progress_bar = progress_bar.clone();
+//         let handle = tokio::spawn(async move {
+//             let result = moved_client.lock().await.get_response(request).await;
+//             if let Ok(response) = &result {
+//                 moved_progress_bar.set_message(response.name.clone());
+//             }
+//
+//             moved_progress_bar.inc(1);
+//             result
+//         });
+//
+//         handles.push(handle);
+//     }
+//
+//     let mut responses = vec![];
+//     for handle in handles {
+//         let result = handle.await.expect("Failed to unlock ansync handle");
+//         match result {
+//             Ok(response) => responses.push(response),
+//             Err(e) => eprintln!("{e:?}"),
+//         }
+//     }
+//
+//     progress_bar.finish();
+//     responses
+// }
 
 fn get_cache_location(path: &Path) -> Result<PathBuf> {
     Ok(Path::new("./cache").join(path.file_name().context("Failed to retreive file name")?))
