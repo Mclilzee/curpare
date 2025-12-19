@@ -9,12 +9,9 @@ use std::{
     sync::Arc,
 };
 
-use anyhow::{Context, Result, anyhow};
-pub use request::{Config, RequestsConfig};
-use reqwest::{
-    Method,
-    header::{CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue},
-};
+use anyhow::{Context, Result};
+use clients::{CachedClient, CachelesClient, RequestClient};
+pub use request::{Requests, RequestsConfig};
 use response::PartResponse;
 pub use response::Response;
 use serde_json::Value;

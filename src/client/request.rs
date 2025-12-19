@@ -2,22 +2,14 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Display;
 
-#[derive(Clone, Deserialize)]
-pub struct RequestsConfig {
-    pub name: String,
-    pub left: PartRequestConfig,
-    pub right: PartRequestConfig,
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Config {
+#[derive(Deserialize, Serialize)]
+pub struct Requests {
     #[serde(default)]
     pub ignore_lines: Vec<String>,
     pub requests: Vec<RequestsConfig>,
 }
 
-impl Config {
+impl Requests {
     pub fn requires_cache(&self) -> bool {
         self.requests
             .iter()
@@ -25,9 +17,9 @@ impl Config {
     }
 }
 
-impl From<Vec<RequestsConfig>> for Config {
+impl From<Vec<RequestsConfig>> for Requests {
     fn from(requests: Vec<RequestsConfig>) -> Self {
-        Config {
+        Requests {
             ignore_lines: vec![],
             requests,
         }
@@ -47,7 +39,7 @@ impl Display for RequestsConfig {
     }
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct PartRequestConfig {
     pub url: String,
@@ -71,7 +63,7 @@ pub struct PartRequestConfig {
     pub query: HashMap<String, String>,
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct BasicAuth {
     pub username: String,
