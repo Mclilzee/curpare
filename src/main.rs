@@ -63,16 +63,13 @@ async fn main() -> Result<()> {
 
 fn print_differences(responses: &[Response]) {
     let (terminal_width, _) = term_size::dimensions().unwrap_or((100, 100));
-    let diff = responses
-        .iter()
-        .map(|response| {
-            if response.left.text == response.right.text {
-                format!(
-                    "{}: {} == {}\n",
-                    response.name, response.left.url, response.right.url
-                )
-            } else {
-                format!(
+    let responses = get_responses(client, configs).await;
+    if args.cache_only {
+        let text_to_print = responses
+            .iter()
+            .fold(String::new(), |mut output, response| {
+                let _ = write!(
+                    output,
                     "{}: {} => {}\n{}",
                     response.name,
                     response.left.url,
@@ -83,11 +80,14 @@ fn print_differences(responses: &[Response]) {
         })
         .collect::<String>();
 
-    PrettyPrinter::new()
-        .input_from_bytes(diff.as_bytes())
-        .paging_mode(bat::PagingMode::QuitIfOneScreen)
-        .print()
-        .expect("Failed to show differences using bat");
+        PrettyPrinter::new()
+            .input_from_bytes(text_to_print.as_bytes())
+            .paging_mode(bat::PagingMode::QuitIfOneScreen)
+            .print()
+            .unwrap();
+    }
+
+    Ok(())
 }
 
 async fn get_responses(mut client: Client, config: Config) -> Vec<Response> {

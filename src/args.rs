@@ -53,10 +53,6 @@ pub struct Args {
     /// Only cache calls and don't show differences
     #[arg(long = "cache-only")]
     pub cache_only: bool,
-
-    /// Output a file config for only calls that have differences
-    #[arg(short = 'o', long = "out")]
-    pub out: Option<PathBuf>,
 }
 
 impl TryFrom<&Args> for Config {
