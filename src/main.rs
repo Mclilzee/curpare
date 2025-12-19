@@ -15,7 +15,7 @@ use anyhow::{Context, Result, anyhow};
 use args::Args;
 use bat::PrettyPrinter;
 use clap::Parser;
-use client::{Client, Requests, Response};
+use client::{Client, Config, Response};
 use indicatif::{ProgressBar, ProgressStyle};
 use tempfile::NamedTempFile;
 use tokio::sync::Mutex;
@@ -23,7 +23,7 @@ use tokio::sync::Mutex;
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
-    let config: Requests = (&args).try_into()?;
+    let config: Config = (&args).try_into()?;
     let requires_caching = config.requires_cache();
     let cache_location = get_cache_location(&args.path);
     if args.clear_cache {
@@ -91,7 +91,7 @@ fn print_differences(responses: &[Response]) {
         .expect("Failed to show differences using bat");
 }
 
-async fn get_responses(client: Client, config: Requests) -> Vec<Response> {
+async fn get_responses(client: Client, config: Config) -> Vec<Response> {
     let mut handles = vec![];
     let client = Arc::new(Mutex::new(client));
     let progress_bar = ProgressBar::new(config.requests.len() as u64);
@@ -131,7 +131,7 @@ async fn get_responses(client: Client, config: Requests) -> Vec<Response> {
     responses
 }
 
-async fn save_responses_with_differences(client: Client, config: Requests) {
+async fn save_responses_with_differences(client: Client, config: Config) {
     let mut handles = vec![];
     let client = Arc::new(Mutex::new(client));
     let progress_bar = ProgressBar::new(config.requests.len() as u64);
@@ -181,7 +181,7 @@ async fn save_responses_with_differences(client: Client, config: Requests) {
         }
     }
 
-    println!("{}", toml::to_string(&Requests::from(requests)).unwrap());
+    println!("{}", toml::to_string(&Config::from(requests)).unwrap());
 
     progress_bar.finish();
 }
