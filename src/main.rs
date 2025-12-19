@@ -4,7 +4,6 @@ mod args;
 mod client;
 
 use std::{
-    fmt::Write as FmtWrite,
     fs::remove_file,
     io::Write,
     path::{Path, PathBuf},
@@ -61,22 +60,28 @@ async fn main() -> Result<()> {
 
 fn print_differences(responses: &[Response]) {
     let (terminal_width, _) = term_size::dimensions().unwrap_or((100, 100));
-    let delta_diffs = responses
+    let diff = responses
         .iter()
-        .fold(String::new(), |mut output, response| {
-            let _ = write!(
-                output,
-                "{}: {} => {}\n{}",
-                response.name,
-                response.left.url,
-                response.right.url,
-                get_delta_result(&response.left.text, &response.right.text, terminal_width)
-            );
-            output
-        });
+        .map(|response| {
+            if response.left.text == response.right.text {
+                format!(
+                    "{}: {} == {}\n",
+                    response.name, response.left.url, response.right.url
+                )
+            } else {
+                format!(
+                    "{}: {} => {}\n{}",
+                    response.name,
+                    response.left.url,
+                    response.right.url,
+                    get_delta_result(&response.left.text, &response.right.text, terminal_width)
+                )
+            }
+        })
+        .collect::<String>();
 
     PrettyPrinter::new()
-        .input_from_bytes(delta_diffs.as_bytes())
+        .input_from_bytes(diff.as_bytes())
         .paging_mode(bat::PagingMode::QuitIfOneScreen)
         .print()
         .expect("Failed to show differences using bat");
