@@ -61,7 +61,7 @@ fn print_differences(responses: &[Response]) {
     let (terminal_width, _) = term_size::dimensions().unwrap_or((100, 100));
     let nthreads = std::thread::available_parallelism()
         .expect("Wasn't able to get threads counts for this machine.");
-    let chunk_size = responses.len() / nthreads;
+    let chunk_size = (responses.len() / nthreads).max(nthreads.into());
     let delta_diffs = responses
         .chunks(chunk_size)
         .map(|responses| {
