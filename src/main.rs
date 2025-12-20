@@ -131,6 +131,10 @@ async fn get_responses(mut client: Client, config: Config) -> Vec<Response> {
         }
     }
 
+    if let Err(e) = client.save_cache() {
+        eprintln!("Failed to save the new cache: {e}");
+    }
+
     progress_bar.finish();
     responses
 }
@@ -191,6 +195,10 @@ async fn save_responses_with_differences(
     let config = toml::to_string(&Config::from(requests))?;
     let mut file = File::create(path)?;
     file.write_all(config.as_bytes())?;
+
+    if let Err(e) = client.save_cache() {
+        eprintln!("Failed to save the new cache: {e}");
+    }
 
     progress_bar.finish();
     Ok(())
