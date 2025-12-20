@@ -6,6 +6,7 @@ use std::{
     fs::{OpenOptions, create_dir_all},
     io::{BufReader, Write},
     path::PathBuf,
+    sync::Arc,
 };
 
 use anyhow::{Context, Result, anyhow};
@@ -17,13 +18,14 @@ use reqwest::{
 use response::PartResponse;
 pub use response::Response;
 use serde_json::Value;
+use tokio::sync::Mutex;
 
 use crate::client::request::PartRequestConfig;
 
 #[derive(Clone)]
 pub struct Client {
     reqwest: reqwest::Client,
-    cache: HashMap<String, PartResponse>,
+    cache: Arc<Mutex<HashMap<String, PartResponse>>>,
     cache_location: Option<PathBuf>,
 }
 
@@ -31,7 +33,7 @@ impl Client {
     pub fn new() -> Self {
         Self {
             reqwest: reqwest::Client::new(),
-            cache: HashMap::new(),
+            cache: Arc::new(Mutex::new(HashMap::new())),
             cache_location: None,
         }
     }
@@ -48,7 +50,7 @@ impl Client {
 
     async fn get(&self, request: PartRequestConfig) -> Result<PartResponse> {
         if request.cached
-            && let Some(response) = self.cache.get(&request.url)
+            && let Some(response) = self.cache.lock().await.get(&request.url)
         {
             return Ok(response.clone());
         }
@@ -167,22 +169,29 @@ impl Client {
         let cache: HashMap<String, PartResponse> =
             serde_json::from_reader(reader).unwrap_or_default();
 
-        self.cache = cache;
+        self.cache = Arc::new(Mutex::new(cache));
         self.cache_location = Some(cache_location);
         Ok(())
     }
 
-    pub fn cache_response(&mut self, response: &PartResponse) {
-        self.cache.insert(response.url.clone(), response.clone());
+    pub async fn cache_response(&mut self, response: &PartResponse) {
+        self.cache
+            .lock()
+            .await
+            .insert(response.url.clone(), response.clone());
     }
 
-    pub fn save_cache(&mut self) -> Result<()> {
+    pub fn save_cache(mut self) -> Result<()> {
         if self.cache_location.is_none() {
             return Ok(());
         }
 
         let cache_location = self.cache_location.take().unwrap();
-        let cache_json = serde_json::to_vec(&self.cache).expect("To unwrap");
+        let cache = Arc::try_unwrap(self.cache).map_err(|_| {
+            anyhow!("Failed to take ownership of cache, it is still being referenced somewhere else {}", cache_location.display()
+            )
+        })?.into_inner();
+        let cache_json = serde_json::to_vec(&cache).expect("To unwrap");
         OpenOptions::new()
             .write(true)
             .create(true)
