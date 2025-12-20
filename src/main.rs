@@ -118,11 +118,11 @@ async fn get_responses(mut client: Client, config: Config) -> Vec<Response> {
         match result {
             (Ok(response), left_cached, right_cached) => {
                 if left_cached {
-                    client.cache_response(&response.left);
+                    client.cache_response(&response.left).await;
                 }
 
                 if right_cached {
-                    client.cache_response(&response.right);
+                    client.cache_response(&response.right).await;
                 }
 
                 responses.push(response);
@@ -177,11 +177,11 @@ async fn save_responses_with_differences(
         match result {
             Ok((request, response)) => {
                 if request.left.cached {
-                    client.cache_response(&response.left);
+                    client.cache_response(&response.left).await;
                 }
 
                 if request.right.cached {
-                    client.cache_response(&response.right);
+                    client.cache_response(&response.right).await;
                 }
 
                 if response.left.text != response.right.text {
