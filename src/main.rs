@@ -90,7 +90,7 @@ fn print_differences(responses: &[Response]) {
         .expect("Failed to show differences using bat");
 }
 
-async fn get_responses(mut client: Client, config: Config) -> Vec<Response> {
+async fn get_responses(client: Client, config: Config) -> Vec<Response> {
     let mut handles = vec![];
     let progress_bar = ProgressBar::new(config.requests.len() as u64);
     progress_bar.set_style(
@@ -99,14 +99,12 @@ async fn get_responses(mut client: Client, config: Config) -> Vec<Response> {
     );
 
     for request in config.requests {
-        let moved_client = client.clone();
+        let mut moved_client = client.clone();
         let moved_progress_bar = progress_bar.clone();
         let handle = tokio::spawn(async move {
-            let left_cached = request.left.cached;
-            let right_cached = request.right.cached;
             let result = moved_client.get_response(request).await;
             moved_progress_bar.inc(1);
-            (result, left_cached, right_cached)
+            result
         });
 
         handles.push(handle);
@@ -116,23 +114,11 @@ async fn get_responses(mut client: Client, config: Config) -> Vec<Response> {
     for handle in handles {
         let result = handle.await.expect("Failed to unlock ansync handle");
         match result {
-            (Ok(response), left_cached, right_cached) => {
-                if left_cached {
-                    client.cache_response(&response.left).await;
-                }
-
-                if right_cached {
-                    client.cache_response(&response.right).await;
-                }
-
+            Ok(response) => {
                 responses.push(response);
             }
-            (Err(e), _, _) => eprintln!("{e:?}"),
+            Err(e) => eprintln!("{e:?}"),
         }
-    }
-
-    if let Err(e) = client.save_cache() {
-        eprintln!("Failed to save the new cache: {e}");
     }
 
     progress_bar.finish();
@@ -140,7 +126,7 @@ async fn get_responses(mut client: Client, config: Config) -> Vec<Response> {
 }
 
 async fn save_responses_with_differences(
-    mut client: Client,
+    client: Client,
     config: Config,
     path: PathBuf,
 ) -> Result<()> {
@@ -152,7 +138,7 @@ async fn save_responses_with_differences(
     );
 
     for request in config.requests {
-        let moved_client = client.clone();
+        let mut moved_client = client.clone();
         let moved_progress_bar = progress_bar.clone();
         let handle = tokio::spawn(async move {
             let result = moved_client.get_response(request.clone()).await;
@@ -176,14 +162,6 @@ async fn save_responses_with_differences(
         let result = handle.await.expect("Failed to unlock ansync handle");
         match result {
             Ok((request, response)) => {
-                if request.left.cached {
-                    client.cache_response(&response.left).await;
-                }
-
-                if request.right.cached {
-                    client.cache_response(&response.right).await;
-                }
-
                 if response.left.text != response.right.text {
                     requests.push(request);
                 }
@@ -195,10 +173,6 @@ async fn save_responses_with_differences(
     let config = toml::to_string(&Config::from(requests))?;
     let mut file = File::create(path)?;
     file.write_all(config.as_bytes())?;
-
-    if let Err(e) = client.save_cache() {
-        eprintln!("Failed to save the new cache: {e}");
-    }
 
     progress_bar.finish();
     Ok(())

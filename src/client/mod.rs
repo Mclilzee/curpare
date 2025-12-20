@@ -5,8 +5,9 @@ use std::{
     collections::HashMap,
     fs::{OpenOptions, create_dir_all},
     io::{BufReader, Write},
+    mem,
     path::PathBuf,
-    sync::Arc,
+    sync::{Arc, Mutex},
 };
 
 use anyhow::{Context, Result, anyhow};
@@ -18,7 +19,6 @@ use reqwest::{
 use response::PartResponse;
 pub use response::Response;
 use serde_json::Value;
-use tokio::sync::Mutex;
 
 use crate::client::request::PartRequestConfig;
 
@@ -38,19 +38,34 @@ impl Client {
         }
     }
 
-    pub async fn get_response(&self, requests: RequestsConfig) -> Result<Response> {
+    pub async fn get_response(&mut self, request: RequestsConfig) -> Result<Response> {
+        let cache_left = request.left.cached;
+        let cache_right = request.right.cached;
         let (left_response, right_response) =
-            tokio::join!(self.get(requests.left), self.get(requests.right));
+            tokio::join!(self.get(request.left), self.get(request.right));
 
         let left_response = left_response?;
         let right_response = right_response?;
 
-        Ok(Response::new(requests.name, left_response, right_response))
+        if cache_left || cache_right {
+            {
+                let mut cache = self.cache.lock().unwrap();
+                if cache_left {
+                    cache.insert(left_response.url.clone(), left_response.clone());
+                }
+
+                if cache_right {
+                    cache.insert(right_response.url.clone(), right_response.clone());
+                }
+            }
+        }
+
+        Ok(Response::new(request.name, left_response, right_response))
     }
 
     async fn get(&self, request: PartRequestConfig) -> Result<PartResponse> {
         if request.cached
-            && let Some(response) = self.cache.lock().await.get(&request.url)
+            && let Some(response) = self.cache.lock().unwrap().get(&request.url)
         {
             return Ok(response.clone());
         }
@@ -173,44 +188,42 @@ impl Client {
         self.cache_location = Some(cache_location);
         Ok(())
     }
+}
 
-    pub async fn cache_response(&mut self, response: &PartResponse) {
-        self.cache
-            .lock()
-            .await
-            .insert(response.url.clone(), response.clone());
-    }
-
-    pub fn save_cache(mut self) -> Result<()> {
-        if self.cache_location.is_none() {
-            return Ok(());
+impl Drop for Client {
+    fn drop(&mut self) {
+        if self.cache_location.is_none() || Arc::strong_count(&self.cache) > 1 {
+            return;
         }
 
         let cache_location = self.cache_location.take().unwrap();
-        let cache = Arc::try_unwrap(self.cache).map_err(|_| {
-            anyhow!("Failed to take ownership of cache, it is still being referenced somewhere else {}", cache_location.display()
-            )
-        })?.into_inner();
+        let cache = mem::replace(&mut self.cache, Arc::new(Mutex::new(HashMap::new())));
+        let cache = Arc::try_unwrap(cache)
+            .ok()
+            .expect("There should only be one reference to cache at this point")
+            .into_inner()
+            .expect("There should be one reference to this mutex at this point");
+
         let cache_json = serde_json::to_vec(&cache).expect("To unwrap");
-        OpenOptions::new()
+        match OpenOptions::new()
             .write(true)
             .create(true)
             .truncate(true)
             .open(&cache_location)
-            .map_err(|e| {
-                anyhow!(
-                    "Failed to open file for saving new cache for path {}: {e:?}",
-                    cache_location.display()
-                )
-            })?
-            .write_all(&cache_json)
-            .map_err(|e| {
-                anyhow!(
-                    "Failed to save new cache into cache file for path {}: {e:?}",
-                    cache_location.display()
-                )
-            })?;
-
-        Ok(())
+        {
+            Ok(mut file) => {
+                let result = file.write_all(&cache_json);
+                if let Err(e) = result {
+                    eprintln!(
+                        "Failed to save new cache into cache file for path {}: {e:?}",
+                        cache_location.display()
+                    );
+                }
+            }
+            Err(e) => eprintln!(
+                "Failed to open file for saving new cache for path {}: {e:?}",
+                cache_location.display()
+            ),
+        }
     }
 }
