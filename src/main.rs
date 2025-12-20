@@ -4,28 +4,25 @@ mod args;
 mod client;
 
 use std::{
-    fmt::Write as FmtWrite,
-    fs::remove_file,
+    fs::{File, remove_file},
     io::Write,
     path::{Path, PathBuf},
     process::Command,
-    sync::Arc,
 };
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow};
 use args::Args;
 use bat::PrettyPrinter;
 use clap::Parser;
 use client::{Client, Config, Response};
 use indicatif::{ProgressBar, ProgressStyle};
 use tempfile::NamedTempFile;
-use tokio::sync::Mutex;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
-    let configs: Config = (&args).try_into()?;
-    let requires_caching = configs.requires_cache();
+    let config: Config = (&args).try_into()?;
+    let requires_caching = config.requires_cache();
     let cache_location = get_cache_location(&args.path);
     if args.clear_cache {
         let cache_location = cache_location.as_ref().unwrap_or_else(|e| {
@@ -44,61 +41,72 @@ async fn main() -> Result<()> {
             })?;
         }
     }
+    let mut client = Client::new();
 
-    let client = if requires_caching {
-        Client::new_cached(cache_location?).context("Failed to load cache")?
-    } else {
-        Client::new()
-    };
+    if requires_caching {
+        client
+            .load_cache(cache_location?)
+            .context("Failed to load cache")?;
+    }
 
+    if let Some(path) = args.out {
+        save_responses_with_differences(client, config, path).await?;
+        return Ok(());
+    }
+
+    let responses = get_responses(client, config).await;
+    if !args.cache_only {
+        print_differences(&responses);
+    }
+    Ok(())
+}
+
+fn print_differences(responses: &[Response]) {
     let (terminal_width, _) = term_size::dimensions().unwrap_or((100, 100));
-    let text_to_print =
-        get_responses(client, configs)
-            .await
-            .iter()
-            .fold(String::new(), |mut output, response| {
-                let _ = write!(
-                    output,
+    let diff = responses
+        .iter()
+        .map(|response| {
+            if response.left.text == response.right.text {
+                format!(
+                    "{}: {} == {}\n",
+                    response.name, response.left.url, response.right.url
+                )
+            } else {
+                format!(
                     "{}: {} => {}\n{}",
                     response.name,
                     response.left.url,
                     response.right.url,
                     get_delta_result(&response.left.text, &response.right.text, terminal_width)
-                );
-                output
-            });
+                )
+            }
+        })
+        .collect::<String>();
 
     PrettyPrinter::new()
-        .input_from_bytes(text_to_print.as_bytes())
+        .input_from_bytes(diff.as_bytes())
         .paging_mode(bat::PagingMode::QuitIfOneScreen)
         .print()
-        .unwrap();
-
-    Ok(())
+        .expect("Failed to show differences using bat");
 }
 
-async fn get_responses(client: Client, config: Config) -> Vec<Response> {
+async fn get_responses(mut client: Client, config: Config) -> Vec<Response> {
     let mut handles = vec![];
-    let client = Arc::new(Mutex::new(client));
     let progress_bar = ProgressBar::new(config.requests.len() as u64);
     progress_bar.set_style(
-        ProgressStyle::with_template(
-            "[{elapsed_precise}] {wide_bar:.cyan/blue} {pos:>7}/{len:7} Sending request for: {msg} ",
-        )
-        .unwrap(),
+        ProgressStyle::with_template("[{elapsed_precise}] {wide_bar:.cyan/blue} {pos:>7}/{len:7}")
+            .unwrap(),
     );
 
     for request in config.requests {
         let moved_client = client.clone();
         let moved_progress_bar = progress_bar.clone();
         let handle = tokio::spawn(async move {
-            let result = moved_client.lock().await.get_response(request).await;
-            if let Ok(response) = &result {
-                moved_progress_bar.set_message(response.name.clone());
-            }
-
+            let left_cached = request.left.cached;
+            let right_cached = request.right.cached;
+            let result = moved_client.get_response(request).await;
             moved_progress_bar.inc(1);
-            result
+            (result, left_cached, right_cached)
         });
 
         handles.push(handle);
@@ -107,15 +115,93 @@ async fn get_responses(client: Client, config: Config) -> Vec<Response> {
     let mut responses = vec![];
     for handle in handles {
         let result = handle.await.expect("Failed to unlock ansync handle");
-        progress_bar.inc(1);
         match result {
-            Ok(response) => responses.push(response),
-            Err(e) => eprintln!("{e:?}"),
+            (Ok(response), left_cached, right_cached) => {
+                if left_cached {
+                    client.cache_response(&response.left).await;
+                }
+
+                if right_cached {
+                    client.cache_response(&response.right).await;
+                }
+
+                responses.push(response);
+            }
+            (Err(e), _, _) => eprintln!("{e:?}"),
         }
+    }
+
+    if let Err(e) = client.save_cache() {
+        eprintln!("Failed to save the new cache: {e}");
     }
 
     progress_bar.finish();
     responses
+}
+
+async fn save_responses_with_differences(
+    mut client: Client,
+    config: Config,
+    path: PathBuf,
+) -> Result<()> {
+    let mut handles = vec![];
+    let progress_bar = ProgressBar::new(config.requests.len() as u64);
+    progress_bar.set_style(
+        ProgressStyle::with_template("[{elapsed_precise}] {wide_bar:.cyan/blue} {pos:>7}/{len:7}")
+            .unwrap(),
+    );
+
+    for request in config.requests {
+        let moved_client = client.clone();
+        let moved_progress_bar = progress_bar.clone();
+        let handle = tokio::spawn(async move {
+            let result = moved_client.get_response(request.clone()).await;
+            match result {
+                Ok(response) => {
+                    moved_progress_bar.inc(1);
+                    Ok((request, response))
+                }
+                Err(e) => {
+                    moved_progress_bar.inc(1);
+                    Err(anyhow!("{e}"))
+                }
+            }
+        });
+
+        handles.push(handle);
+    }
+
+    let mut requests = vec![];
+    for handle in handles {
+        let result = handle.await.expect("Failed to unlock ansync handle");
+        match result {
+            Ok((request, response)) => {
+                if request.left.cached {
+                    client.cache_response(&response.left).await;
+                }
+
+                if request.right.cached {
+                    client.cache_response(&response.right).await;
+                }
+
+                if response.left.text != response.right.text {
+                    requests.push(request);
+                }
+            }
+            Err(e) => eprintln!("{e:?}"),
+        }
+    }
+
+    let config = toml::to_string(&Config::from(requests))?;
+    let mut file = File::create(path)?;
+    file.write_all(config.as_bytes())?;
+
+    if let Err(e) = client.save_cache() {
+        eprintln!("Failed to save the new cache: {e}");
+    }
+
+    progress_bar.finish();
+    Ok(())
 }
 
 fn get_cache_location(path: &Path) -> Result<PathBuf> {
