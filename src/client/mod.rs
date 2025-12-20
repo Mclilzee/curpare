@@ -1,31 +1,148 @@
-mod clients;
 mod request;
 mod response;
 
 use std::{
     collections::HashMap,
     fs::{OpenOptions, create_dir_all},
-    io::BufReader,
+    io::{BufReader, Write},
     path::PathBuf,
+    sync::Arc,
 };
 
-use anyhow::{Context, Result};
-use clients::{CachedClient, CachelesClient, RequestClient};
+use anyhow::{Context, Result, anyhow};
 pub use request::{Config, RequestsConfig};
+use reqwest::{
+    Method,
+    header::{CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue},
+};
 use response::PartResponse;
 pub use response::Response;
+use serde_json::Value;
+use tokio::sync::Mutex;
 
-pub enum Client {
-    CachelessClient(CachelesClient),
-    CachedClient(CachedClient),
+use crate::client::request::PartRequestConfig;
+
+#[derive(Clone)]
+pub struct Client {
+    reqwest: reqwest::Client,
+    cache: Arc<Mutex<HashMap<String, PartResponse>>>,
+    cache_location: Option<PathBuf>,
 }
 
 impl Client {
     pub fn new() -> Self {
-        Self::CachelessClient(CachelesClient::new())
+        Self {
+            reqwest: reqwest::Client::new(),
+            cache: Arc::new(Mutex::new(HashMap::new())),
+            cache_location: None,
+        }
     }
 
-    pub fn new_cached(cache_location: PathBuf) -> Result<Self> {
+    pub async fn get_response(&self, requests: RequestsConfig) -> Result<Response> {
+        let (left_response, right_response) =
+            tokio::join!(self.get(requests.left), self.get(requests.right));
+
+        let left_response = left_response?;
+        let right_response = right_response?;
+
+        Ok(Response::new(requests.name, left_response, right_response))
+    }
+
+    async fn get(&self, request: PartRequestConfig) -> Result<PartResponse> {
+        if request.cached
+            && let Some(response) = self.cache.lock().await.get(&request.url)
+        {
+            return Ok(response.clone());
+        }
+
+        self.get_from_url(request).await
+    }
+
+    async fn get_from_url(&self, part_request: PartRequestConfig) -> Result<PartResponse> {
+        let method = part_request
+            .method
+            .as_deref()
+            .unwrap_or("GET")
+            .parse::<Method>()
+            .map_err(|_| {
+                anyhow!(
+                    "Unrecognized method {}",
+                    part_request.method.unwrap_or_default()
+                )
+            })?;
+
+        let mut request = self.reqwest.request(method, &part_request.url);
+
+        if let Some(basic_auth) = part_request.basic_auth {
+            request = request.basic_auth(basic_auth.username, basic_auth.password);
+        }
+
+        let headers = part_request
+            .headers
+            .iter()
+            .map(|(k, v)| {
+                (
+                    HeaderName::from_bytes(k.as_bytes())
+                        .expect("Header contains invalid UTF-8 characters"),
+                    HeaderValue::from_str(v).expect("Header value is not valid"),
+                )
+            })
+            .collect::<HeaderMap>();
+
+        let response = request
+            .headers(headers)
+            .query(&part_request.query)
+            .send()
+            .await
+            .with_context(|| format!("Failed sending request to URL {}", part_request.url))?;
+
+        let status_code = response.status();
+
+        let content_type = response
+            .headers()
+            .get(CONTENT_TYPE)
+            .cloned()
+            .ok_or_else(|| anyhow!("CONTENT_TYPE header not found"))?;
+
+        let content_type = content_type.to_str().map_err(|e| anyhow::anyhow!(e))?;
+
+        let mut text = response.text().await.map_err(|e| anyhow::anyhow!(e))?;
+        text = match content_type {
+            ct if ct.starts_with("application/json") => Self::json_pretty_format(&text)
+                .with_context(|| format!("Failed to format JSON for URL: {}", part_request.url))?,
+            ct => {
+                return Err(anyhow!(
+                    "Could not format response of content_type: {ct}\nURL: {}",
+                    part_request.url
+                ));
+            }
+        };
+
+        if !part_request.ignore_lines.is_empty() {
+            text = Self::filter(&text, &part_request.ignore_lines);
+        }
+
+        Ok(PartResponse::new(part_request.url, status_code, text))
+    }
+
+    fn json_pretty_format(text: &str) -> Result<String> {
+        serde_json::from_str::<Value>(text)
+            .and_then(|value| serde_json::to_string_pretty(&value))
+            .context("Invalid body format, expecting JSON format")
+    }
+
+    fn filter(text: &str, ignore_list: &[String]) -> String {
+        text.lines()
+            .filter(|&line| Self::ignore_line(line, ignore_list))
+            .collect::<Vec<&str>>()
+            .join("\n")
+    }
+
+    fn ignore_line(line: &str, ignore_lines: &[String]) -> bool {
+        !ignore_lines.iter().any(|ignore| line.contains(ignore))
+    }
+
+    pub fn load_cache(&mut self, cache_location: PathBuf) -> Result<()> {
         if let Some(parent) = cache_location.parent() {
             let _ = create_dir_all(parent).with_context(|| {
                 format!(
@@ -52,13 +169,48 @@ impl Client {
         let cache: HashMap<String, PartResponse> =
             serde_json::from_reader(reader).unwrap_or_default();
 
-        Ok(Self::CachedClient(CachedClient::new(cache, cache_location)))
+        self.cache = Arc::new(Mutex::new(cache));
+        self.cache_location = Some(cache_location);
+        Ok(())
     }
 
-    pub async fn get_response(&mut self, requests: RequestsConfig) -> Result<Response> {
-        match self {
-            Client::CachedClient(client) => client.get_response(requests).await,
-            Client::CachelessClient(client) => client.get_response(requests).await,
+    pub async fn cache_response(&mut self, response: &PartResponse) {
+        self.cache
+            .lock()
+            .await
+            .insert(response.url.clone(), response.clone());
+    }
+
+    pub fn save_cache(mut self) -> Result<()> {
+        if self.cache_location.is_none() {
+            return Ok(());
         }
+
+        let cache_location = self.cache_location.take().unwrap();
+        let cache = Arc::try_unwrap(self.cache).map_err(|_| {
+            anyhow!("Failed to take ownership of cache, it is still being referenced somewhere else {}", cache_location.display()
+            )
+        })?.into_inner();
+        let cache_json = serde_json::to_vec(&cache).expect("To unwrap");
+        OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(&cache_location)
+            .map_err(|e| {
+                anyhow!(
+                    "Failed to open file for saving new cache for path {}: {e:?}",
+                    cache_location.display()
+                )
+            })?
+            .write_all(&cache_json)
+            .map_err(|e| {
+                anyhow!(
+                    "Failed to save new cache into cache file for path {}: {e:?}",
+                    cache_location.display()
+                )
+            })?;
+
+        Ok(())
     }
 }

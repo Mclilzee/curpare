@@ -102,9 +102,11 @@ url: "${HOST}/query"
 ### Options
 
 - `-c`, `--clear-cache`: Clear old cache for this TOML configuration.
+- `-o`, `--out`: Choose a path file to generate a TOML configuration that will only contain the requests which had differences
 - `-a`, `--all-cache`: Cache all calls for this TOML configuration.
 - `-n`, `--no-cache`: Do not use cache for any calls for this TOML configuration.
 - `-i`, `--skip-ignore`: Skip all ignore lines during comparison.
+- `--cache-only`: Will only fill the caches without showing any differences at the end. NOTE: will not clear the cache, only update it if URLs not already cached
 - `-h`, `--help`: Print help information.
 - `-V`, `--version`: Print the version of Curpare.
 

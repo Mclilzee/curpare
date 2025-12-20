@@ -49,6 +49,14 @@ pub struct Args {
     /// Skip all the ignore lines
     #[arg(short = 'i', long = "skip-ignore")]
     pub skip_ignore: bool,
+
+    /// Only cache calls and don't show differences
+    #[arg(long = "cache-only")]
+    pub cache_only: bool,
+
+    /// Output a file config for only calls that have differences
+    #[arg(short = 'o', long = "out")]
+    pub out: Option<PathBuf>,
 }
 
 impl TryFrom<&Args> for Config {
@@ -62,14 +70,14 @@ impl TryFrom<&Args> for Config {
             .map(|toml| process_env_variables(&toml, &envs))
             .map_err(|e| Error::msg(format!("Failed to read {}: {}", args.path.display(), e)))?;
 
-        let mut config: Config = toml::from_str(&toml).with_context(|| {
+        let mut requests: Config = toml::from_str(&toml).with_context(|| {
             format!(
                 "Toml in path {} is not formatted correctly",
                 args.path.display()
             )
         })?;
 
-        for request_config in &mut config.requests {
+        for request_config in &mut requests.requests {
             if args.skip_ignore {
                 request_config.left.ignore_lines = vec![];
                 request_config.right.ignore_lines = vec![];
@@ -77,12 +85,12 @@ impl TryFrom<&Args> for Config {
                 request_config
                     .left
                     .ignore_lines
-                    .extend(config.ignore_lines.clone());
+                    .extend(requests.ignore_lines.clone());
 
                 request_config
                     .right
                     .ignore_lines
-                    .extend(config.ignore_lines.clone());
+                    .extend(requests.ignore_lines.clone());
             }
 
             if args.all_cache {
@@ -94,7 +102,7 @@ impl TryFrom<&Args> for Config {
             }
         }
 
-        Ok(config)
+        Ok(requests)
     }
 }
 
