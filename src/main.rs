@@ -195,7 +195,7 @@ async fn save_responses_with_differences(
 
     let config = toml::to_string(&Config::from(requests))?;
     let mut file = File::create(path)?;
-    file.write(config.as_bytes())?;
+    file.write_all(config.as_bytes())?;
 
     progress_bar.finish();
     Ok(())
