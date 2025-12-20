@@ -176,12 +176,10 @@ impl Client {
     pub fn cache_response(&mut self, response: &PartResponse) {
         self.cache.insert(response.url.clone(), response.clone());
     }
-}
 
-impl Drop for Client {
-    fn drop(&mut self) {
-        if self.cache_location.is_some() {
-            return;
+    pub fn save_cache(&mut self) -> Result<()> {
+        if self.cache_location.is_none() {
+            return Ok(());
         }
 
         let cache_location = self.cache_location.take().unwrap();
@@ -191,18 +189,20 @@ impl Drop for Client {
             .create(true)
             .truncate(true)
             .open(&cache_location)
-            .unwrap_or_else(|e| {
-                panic!(
+            .map_err(|e| {
+                anyhow!(
                     "Failed to open file for saving new cache for path {}: {e:?}",
                     cache_location.display()
                 )
-            })
+            })?
             .write_all(&cache_json)
-            .unwrap_or_else(|e| {
-                panic!(
+            .map_err(|e| {
+                anyhow!(
                     "Failed to save new cache into cache file for path {}: {e:?}",
                     cache_location.display()
                 )
-            });
+            })?;
+
+        Ok(())
     }
 }
