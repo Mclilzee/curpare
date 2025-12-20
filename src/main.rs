@@ -96,10 +96,8 @@ async fn get_responses(client: Client, config: Config) -> Vec<Response> {
     let client = Arc::new(Mutex::new(client));
     let progress_bar = ProgressBar::new(config.requests.len() as u64);
     progress_bar.set_style(
-        ProgressStyle::with_template(
-            "[{elapsed_precise}] {wide_bar:.cyan/blue} {pos:>7}/{len:7} Sending request for: {msg} ",
-        )
-        .unwrap(),
+        ProgressStyle::with_template("[{elapsed_precise}] {wide_bar:.cyan/blue} {pos:>7}/{len:7}")
+            .unwrap(),
     );
 
     for request in config.requests {
@@ -107,10 +105,6 @@ async fn get_responses(client: Client, config: Config) -> Vec<Response> {
         let moved_progress_bar = progress_bar.clone();
         let handle = tokio::spawn(async move {
             let result = moved_client.lock().await.get_response(request).await;
-            if let Ok(response) = &result {
-                moved_progress_bar.set_message(response.name.clone());
-            }
-
             moved_progress_bar.inc(1);
             result
         });
@@ -140,10 +134,8 @@ async fn save_responses_with_differences(
     let client = Arc::new(Mutex::new(client));
     let progress_bar = ProgressBar::new(config.requests.len() as u64);
     progress_bar.set_style(
-        ProgressStyle::with_template(
-            "[{elapsed_precise}] {wide_bar:.cyan/blue} {pos:>7}/{len:7} Sending request for: {msg} ",
-        )
-        .unwrap(),
+        ProgressStyle::with_template("[{elapsed_precise}] {wide_bar:.cyan/blue} {pos:>7}/{len:7}")
+            .unwrap(),
     );
 
     for request in config.requests {
@@ -157,7 +149,6 @@ async fn save_responses_with_differences(
                 .await;
             match &result {
                 Ok(response) => {
-                    moved_progress_bar.set_message(response.name.clone());
                     moved_progress_bar.inc(1);
                     if response.left.text == response.right.text {
                         Ok(None)
