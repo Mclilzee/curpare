@@ -8,7 +8,6 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
     process::Command,
-    sync::Arc,
 };
 
 use anyhow::{Context, Result, anyhow};
@@ -18,7 +17,6 @@ use clap::Parser;
 use client::{Client, Config, Response};
 use indicatif::{ProgressBar, ProgressStyle};
 use tempfile::NamedTempFile;
-use tokio::sync::Mutex;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -43,12 +41,13 @@ async fn main() -> Result<()> {
             })?;
         }
     }
+    let mut client = Client::new();
 
-    let client = if requires_caching {
-        Client::new_cached(cache_location?).context("Failed to load cache")?
-    } else {
-        Client::new()
-    };
+    if requires_caching {
+        client
+            .load_cache(cache_location?)
+            .context("Failed to load cache")?;
+    }
 
     if let Some(path) = args.out {
         save_responses_with_differences(client, config, path).await?;
@@ -91,9 +90,8 @@ fn print_differences(responses: &[Response]) {
         .expect("Failed to show differences using bat");
 }
 
-async fn get_responses(client: Client, config: Config) -> Vec<Response> {
+async fn get_responses(mut client: Client, config: Config) -> Vec<Response> {
     let mut handles = vec![];
-    let client = Arc::new(Mutex::new(client));
     let progress_bar = ProgressBar::new(config.requests.len() as u64);
     progress_bar.set_style(
         ProgressStyle::with_template("[{elapsed_precise}] {wide_bar:.cyan/blue} {pos:>7}/{len:7}")
@@ -104,9 +102,11 @@ async fn get_responses(client: Client, config: Config) -> Vec<Response> {
         let moved_client = client.clone();
         let moved_progress_bar = progress_bar.clone();
         let handle = tokio::spawn(async move {
-            let result = moved_client.lock().await.get_response(request).await;
+            let left_cached = request.left.cached;
+            let right_cached = request.right.cached;
+            let result = moved_client.get_response(request).await;
             moved_progress_bar.inc(1);
-            result
+            (result, left_cached, right_cached)
         });
 
         handles.push(handle);
@@ -116,8 +116,18 @@ async fn get_responses(client: Client, config: Config) -> Vec<Response> {
     for handle in handles {
         let result = handle.await.expect("Failed to unlock ansync handle");
         match result {
-            Ok(response) => responses.push(response),
-            Err(e) => eprintln!("{e:?}"),
+            (Ok(response), left_cached, right_cached) => {
+                if left_cached {
+                    client.cache_response(&response.left);
+                }
+
+                if right_cached {
+                    client.cache_response(&response.right);
+                }
+
+                responses.push(response);
+            }
+            (Err(e), _, _) => eprintln!("{e:?}"),
         }
     }
 
@@ -126,12 +136,11 @@ async fn get_responses(client: Client, config: Config) -> Vec<Response> {
 }
 
 async fn save_responses_with_differences(
-    client: Client,
+    mut client: Client,
     config: Config,
     path: PathBuf,
 ) -> Result<()> {
     let mut handles = vec![];
-    let client = Arc::new(Mutex::new(client));
     let progress_bar = ProgressBar::new(config.requests.len() as u64);
     progress_bar.set_style(
         ProgressStyle::with_template("[{elapsed_precise}] {wide_bar:.cyan/blue} {pos:>7}/{len:7}")
@@ -142,19 +151,11 @@ async fn save_responses_with_differences(
         let moved_client = client.clone();
         let moved_progress_bar = progress_bar.clone();
         let handle = tokio::spawn(async move {
-            let result = moved_client
-                .lock()
-                .await
-                .get_response(request.clone())
-                .await;
-            match &result {
+            let result = moved_client.get_response(request.clone()).await;
+            match result {
                 Ok(response) => {
                     moved_progress_bar.inc(1);
-                    if response.left.text == response.right.text {
-                        Ok(None)
-                    } else {
-                        Ok(Some(request))
-                    }
+                    Ok((request, response))
                 }
                 Err(e) => {
                     moved_progress_bar.inc(1);
@@ -170,8 +171,19 @@ async fn save_responses_with_differences(
     for handle in handles {
         let result = handle.await.expect("Failed to unlock ansync handle");
         match result {
-            Ok(Some(request)) => requests.push(request),
-            Ok(None) => {}
+            Ok((request, response)) => {
+                if request.left.cached {
+                    client.cache_response(&response.left);
+                }
+
+                if request.right.cached {
+                    client.cache_response(&response.right);
+                }
+
+                if response.left.text != response.right.text {
+                    requests.push(request);
+                }
+            }
             Err(e) => eprintln!("{e:?}"),
         }
     }
