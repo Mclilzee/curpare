@@ -34,6 +34,10 @@ pub struct Args {
     /// Environmental variables can be used by wrapping them in `${}` within any string value inside the TOML config.
     pub path: PathBuf,
 
+    /// Take n many requests from the config only
+    #[arg(short = 't', long = "take")]
+    pub take: usize,
+
     /// Clear old cache for this toml config
     #[arg(short = 'c', long = "clear-cache")]
     pub clear_cache: bool,
@@ -70,14 +74,18 @@ impl TryFrom<&Args> for Config {
             .map(|toml| process_env_variables(&toml, &envs))
             .map_err(|e| Error::msg(format!("Failed to read {}: {}", args.path.display(), e)))?;
 
-        let mut requests: Config = toml::from_str(&toml).with_context(|| {
+        let mut config: Config = toml::from_str(&toml).with_context(|| {
             format!(
                 "Toml in path {} is not formatted correctly",
                 args.path.display()
             )
         })?;
 
-        for request_config in &mut requests.requests {
+        if args.take > 0 {
+            config.requests = config.requests.into_iter().take(args.take).collect();
+        }
+
+        for request_config in &mut config.requests {
             if args.skip_ignore {
                 request_config.left.ignore_lines = vec![];
                 request_config.right.ignore_lines = vec![];
@@ -85,12 +93,12 @@ impl TryFrom<&Args> for Config {
                 request_config
                     .left
                     .ignore_lines
-                    .extend(requests.ignore_lines.clone());
+                    .extend(config.ignore_lines.clone());
 
                 request_config
                     .right
                     .ignore_lines
-                    .extend(requests.ignore_lines.clone());
+                    .extend(config.ignore_lines.clone());
             }
 
             if args.all_cache {
@@ -102,7 +110,7 @@ impl TryFrom<&Args> for Config {
             }
         }
 
-        Ok(requests)
+        Ok(config)
     }
 }
 
