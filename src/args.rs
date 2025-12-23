@@ -35,8 +35,8 @@ pub struct Args {
     pub path: PathBuf,
 
     /// Take n requests from the config
-    #[arg(short = 't', long = "take", default_value_t = 1)]
-    pub take: usize,
+    #[arg(short = 't', long = "take")]
+    pub take: Option<usize>,
 
     /// Skip n requests from the config
     #[arg(short = 's', long = "skip", default_value_t = 0)]
@@ -85,13 +85,13 @@ impl TryFrom<&Args> for Config {
             )
         })?;
 
-        let take = if args.take > 0 {
-            args.take
-        } else {
-            config.requests.len()
-        };
-
-        config.requests = config.requests.into_iter().skip(args.skip).take(take).collect();
+        let take = args.take.unwrap_or(config.requests.len());
+        config.requests = config
+            .requests
+            .into_iter()
+            .skip(args.skip)
+            .take(take)
+            .collect();
 
         for request_config in &mut config.requests {
             if args.skip_ignore {
