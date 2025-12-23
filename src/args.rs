@@ -34,9 +34,13 @@ pub struct Args {
     /// Environmental variables can be used by wrapping them in `${}` within any string value inside the TOML config.
     pub path: PathBuf,
 
-    /// Take n many requests from the config only
-    #[arg(short = 't', long = "take")]
+    /// Take n requests from the config
+    #[arg(short = 't', long = "take", default_value_t = 1)]
     pub take: usize,
+
+    /// Skip n requests from the config
+    #[arg(short = 's', long = "skip", default_value_t = 0)]
+    pub skip: usize,
 
     /// Clear old cache for this toml config
     #[arg(short = 'c', long = "clear-cache")]
@@ -81,9 +85,13 @@ impl TryFrom<&Args> for Config {
             )
         })?;
 
-        if args.take > 0 {
-            config.requests = config.requests.into_iter().take(args.take).collect();
-        }
+        let take = if args.take > 0 {
+            args.take
+        } else {
+            config.requests.len()
+        };
+
+        config.requests = config.requests.into_iter().skip(args.skip).take(take).collect();
 
         for request_config in &mut config.requests {
             if args.skip_ignore {
