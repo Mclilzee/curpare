@@ -39,41 +39,37 @@ impl Client {
     }
 
     pub async fn get_response(&mut self, request: RequestsConfig) -> Result<Response> {
-        let cache_left = request.left.cached;
-        let cache_right = request.right.cached;
-        let left_request_ignore_lines = request.left.ignore_lines.clone();
-        let right_request_ignore_lines = request.right.ignore_lines.clone();
         let (left_response, right_response) =
-            tokio::join!(self.get(request.left), self.get(request.right));
+            tokio::join!(self.get(&request.left), self.get(&request.right));
 
         let mut left_response = left_response?;
         let mut right_response = right_response?;
 
-        if cache_left || cache_right {
+        if request.left.cached || request.right.cached {
             {
                 let mut cache = self.cache.lock().unwrap();
-                if cache_left {
+                if request.left.cached {
                     cache.insert(left_response.url.clone(), left_response.clone());
                 }
 
-                if cache_right {
+                if request.right.cached {
                     cache.insert(right_response.url.clone(), right_response.clone());
                 }
             }
         }
 
-        if !left_request_ignore_lines.is_empty() {
-            left_response.text = Self::filter(&left_response.text, &left_request_ignore_lines);
+        if !request.left.ignore_lines.is_empty() {
+            left_response.text = Self::filter(&left_response.text, &request.left.ignore_lines);
         }
 
-        if !right_request_ignore_lines.is_empty() {
-            right_response.text = Self::filter(&right_response.text, &right_request_ignore_lines);
+        if !request.right.ignore_lines.is_empty() {
+            right_response.text = Self::filter(&right_response.text, &request.left.ignore_lines);
         }
 
         Ok(Response::new(request.name, left_response, right_response))
     }
 
-    async fn get(&self, request: PartRequestConfig) -> Result<PartResponse> {
+    async fn get(&self, request: &PartRequestConfig) -> Result<PartResponse> {
         if request.cached
             && let Some(response) = self.cache.lock().unwrap().get(&request.url)
         {
@@ -83,7 +79,7 @@ impl Client {
         self.get_from_url(request).await
     }
 
-    async fn get_from_url(&self, part_request: PartRequestConfig) -> Result<PartResponse> {
+    async fn get_from_url(&self, part_request: &PartRequestConfig) -> Result<PartResponse> {
         let method = part_request
             .method
             .as_deref()
@@ -92,14 +88,17 @@ impl Client {
             .map_err(|_| {
                 anyhow!(
                     "Unrecognized method {}",
-                    part_request.method.unwrap_or_default()
+                    part_request
+                        .method
+                        .as_ref()
+                        .expect("Method should exist at this point")
                 )
             })?;
 
         let mut request = self.reqwest.request(method, &part_request.url);
 
-        if let Some(basic_auth) = part_request.basic_auth {
-            request = request.basic_auth(basic_auth.username, basic_auth.password);
+        if let Some(basic_auth) = &part_request.basic_auth {
+            request = request.basic_auth(&basic_auth.username, basic_auth.password.clone());
         }
 
         let headers = part_request
@@ -143,7 +142,11 @@ impl Client {
             }
         };
 
-        Ok(PartResponse::new(part_request.url, status_code, text))
+        Ok(PartResponse::new(
+            part_request.url.clone(),
+            status_code,
+            text,
+        ))
     }
 
     fn json_pretty_format(text: &str) -> Result<String> {
