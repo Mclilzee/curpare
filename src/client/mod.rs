@@ -38,7 +38,7 @@ impl Client {
         }
     }
 
-    pub async fn get_response(&mut self, request: RequestsConfig) -> Result<Response> {
+    pub async fn get_response(&mut self, request: &RequestsConfig) -> Result<Response> {
         let (left_response, right_response) =
             tokio::join!(self.get(&request.left), self.get(&request.right));
 
@@ -66,7 +66,7 @@ impl Client {
             right_response.text = Self::filter(&right_response.text, &request.left.ignore_lines);
         }
 
-        Ok(Response::new(request.name, left_response, right_response))
+        Ok(Response::new(request.name.clone(), left_response, right_response))
     }
 
     async fn get(&self, request: &PartRequestConfig) -> Result<PartResponse> {

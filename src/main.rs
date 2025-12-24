@@ -102,7 +102,7 @@ async fn get_responses(client: Client, config: Config) -> Vec<Response> {
         let mut moved_client = client.clone();
         let moved_progress_bar = progress_bar.clone();
         let handle = tokio::spawn(async move {
-            let result = moved_client.get_response(request).await;
+            let result = moved_client.get_response(&request).await;
             moved_progress_bar.inc(1);
             result
         });
@@ -141,7 +141,7 @@ async fn save_responses_with_differences(
         let mut moved_client = client.clone();
         let moved_progress_bar = progress_bar.clone();
         let handle = tokio::spawn(async move {
-            let result = moved_client.get_response(request.clone()).await;
+            let result = moved_client.get_response(&request).await;
             match result {
                 Ok(response) => {
                     moved_progress_bar.inc(1);
