@@ -41,11 +41,13 @@ impl Client {
     pub async fn get_response(&mut self, request: RequestsConfig) -> Result<Response> {
         let cache_left = request.left.cached;
         let cache_right = request.right.cached;
+        let left_request_ignore_lines = request.left.ignore_lines.clone();
+        let right_request_ignore_lines = request.right.ignore_lines.clone();
         let (left_response, right_response) =
             tokio::join!(self.get(request.left), self.get(request.right));
 
-        let left_response = left_response?;
-        let right_response = right_response?;
+        let mut left_response = left_response?;
+        let mut right_response = right_response?;
 
         if cache_left || cache_right {
             {
@@ -58,6 +60,14 @@ impl Client {
                     cache.insert(right_response.url.clone(), right_response.clone());
                 }
             }
+        }
+
+        if !left_request_ignore_lines.is_empty() {
+            left_response.text = Self::filter(&left_response.text, &left_request_ignore_lines);
+        }
+
+        if !right_request_ignore_lines.is_empty() {
+            right_response.text = Self::filter(&right_response.text, &right_request_ignore_lines);
         }
 
         Ok(Response::new(request.name, left_response, right_response))
@@ -132,10 +142,6 @@ impl Client {
                 ));
             }
         };
-
-        if !part_request.ignore_lines.is_empty() {
-            text = Self::filter(&text, &part_request.ignore_lines);
-        }
 
         Ok(PartResponse::new(part_request.url, status_code, text))
     }
