@@ -14,7 +14,7 @@ use anyhow::{Context, Result, anyhow};
 pub use request::{Config, RequestsConfig};
 use reqwest::{
     Method,
-    header::{CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue},
+    header::{CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue, USER_AGENT},
 };
 use response::PartResponse;
 pub use response::Response;
@@ -66,7 +66,11 @@ impl Client {
             right_response.text = Self::filter(&right_response.text, &request.left.ignore_lines);
         }
 
-        Ok(Response::new(request.name.clone(), left_response, right_response))
+        Ok(Response::new(
+            request.name.clone(),
+            left_response,
+            right_response,
+        ))
     }
 
     async fn get(&self, request: &PartRequestConfig) -> Result<PartResponse> {
@@ -114,6 +118,7 @@ impl Client {
             .collect::<HeaderMap>();
 
         let response = request
+            .header(USER_AGENT, "Curpare/1.0")
             .headers(headers)
             .query(&part_request.query)
             .send()
