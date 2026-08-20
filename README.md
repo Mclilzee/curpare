@@ -16,14 +16,16 @@ Curpare is a powerful tool designed to compare the return values, status codes, 
 
 ## Installation
 
-### Requirements
+### Delta
 
-To get started with Curpare, ensure you have [git delta](https://github.com/dandavison/delta) installed. Here is a link to the installation page https://dandavison.github.io/delta/installation.html.
+`curpare` uses [delta](https://github.com/dandavison/delta) as dependency, delta is a very elegant "syntax-highlighting pager for git, diff, and grep output". Here is a link to the [installation page](https://dandavison.github.io/delta/installation.html)
 
-### Installing
+### Cargo
+To `curpare` you can either built it from source or use `cargo`. If you don't already have `cargo` then you can install rustup which will have cargo packaged together.  follow the installation guide for `rustup` [Rustup Page](https://rustup.rs).
 
-If you have `cargo` you can install it using `cargo install curpare`
-Or you can download one of the already pre-compiled versions if its available to your OS. Otherwise currently you will have to compile it from source using `cargo`
+### Curpare
+You can install it using `cargo` using:
+$ `cargo install curpare`
 
 ## Usage
 
