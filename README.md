@@ -1,6 +1,6 @@
 # Curpare
 
-Curpare is a powerful tool designed to compare the return values, status codes, and bodies of JSON APIs seamlessly. It leverages [git-delta](https://github.com/dandavison/delta) to present the output in a clear and user-friendly manner. With Curpare, you can define multiple API endpoints to compare, utilize environment variables, and specify various options for each comparison.
+Curpare is a powerful tool designed to compare the return values, status codes, and bodies of JSON APIs. It uses [git-delta](https://github.com/dandavison/delta) to present the output. you can define multiple API endpoints to compare, utilize environment variables, and specify various options for each comparison.
 
 # Example using Pokemon API
 
@@ -9,10 +9,10 @@ Curpare is a powerful tool designed to compare the return values, status codes, 
 ## Features
 
 - **Flexible TOML Configuration**: Define as many API links as you wish in a TOML format. Each comparison can be customized with specific options.
-- **Caching System**: Caching System: Cache the API calls by caching them to avoid unnecessary API calls. You can utilize the cache system to compare the same API by caching a call and checking it against a live version of the same API. This will make sure you can focus on making progress while having a backup test to see the changes in seconds.
+- **Caching System**: Caching System: Cache the API calls to avoid unnecessary API calls. You can use the cache system to compare the same API by caching a call and checking it against a live version of the same API. This will make sure you can focus on making progress while having a backup test to see the changes in seconds.
 - **Multiple Cache Versions**: Each cached response is stored in its own JSON file within the cache directory, enabling you to maintain multiple versions of the same API for comparison.
 - **Ignore Lines**: Specify lines to ignore during comparisons, making it easier to focus on relevant differences.
-- **Environment Variables**: Use environment variables in your TOML configuration for dynamic URL resolution.
+- **Environment Variables**: Use environment variables in your TOML configuration for dynamic URL resolution or other options.
 
 ## Installation
 
@@ -121,7 +121,3 @@ curpare config.toml
 ```
 
 This will execute the comparisons defined in your JSON file and display the results using `git-delta`.
-
-## Conclusion
-
-Curpare is an essential tool for developers and testers who need to compare API responses efficiently. With its caching system, flexible configuration, and clear output, it simplifies the process of API testing and validation. For more information, check the documentation or explore the source code on GitHub.
